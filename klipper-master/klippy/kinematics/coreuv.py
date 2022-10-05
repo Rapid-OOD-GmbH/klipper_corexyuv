@@ -10,14 +10,22 @@ class CoreXYKinematics:
     def __init__(self, toolhead, config):
         # Setup axis rails
         self.rails = [stepper.LookupMultiRail(config.getsection('stepper_' + n))
-                      for n in 'uvw']
+                      for n in 'xyzuv']
         for s in self.rails[1].get_steppers():
             self.rails[0].get_endstops()[0][0].add_stepper(s)
         for s in self.rails[0].get_steppers():
             self.rails[1].get_endstops()[0][0].add_stepper(s)
+	for s in self.rails[4].get_steppers():
+            self.rails[3].get_endstops()[0][0].add_stepper(s)
+        for s in self.rails[3].get_steppers():
+            self.rails[4].get_endstops()[0][0].add_stepper(s)
+
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
+	self.rails[3].setup_itersolve('corexy_stepper_alloc', b'+')
+        self.rails[4].setup_itersolve('corexy_stepper_alloc', b'-')
+
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
             toolhead.register_step_generator(s.generate_steps)
@@ -75,9 +83,9 @@ class CoreXYKinematics:
                 raise move.move_error()
     def check_move(self, move):
         limits = self.limits
-        xpos, ypos = move.end_pos[:2]
-        if (xpos < limits[0][0] or xpos > limits[0][1]
-            or ypos < limits[1][0] or ypos > limits[1][1]):
+        upos, vpos = move.end_pos[:2]
+        if (upos < limits[0][0] or upos > limits[0][1]
+            or vpos < limits[1][0] or vpos > limits[1][1]):
             self._check_endstops(move)
         if not move.axes_d[2]:
             # Normal XY move - use defaults
@@ -88,7 +96,7 @@ class CoreXYKinematics:
         move.limit_speed(
             self.max_z_velocity * z_ratio, self.max_z_accel * z_ratio)
     def get_status(self, eventtime):
-        axes = [a for a, (l, h) in zip("uvz", self.limits) if l <= h]
+        axes = [a for a, (l, h) in zip("uvzxy", self.limits) if l <= h]
         return {
             'homed_axes': "".join(axes),
             'axis_minimum': self.axes_min,
