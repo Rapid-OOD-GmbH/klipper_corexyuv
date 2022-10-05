@@ -74,7 +74,7 @@ class CoreXYKinematics:
         self.limits = [(1.0, -1.0)] * 3
     def _check_endstops(self, move):
         end_pos = move.end_pos
-        for i in (0, 1, 2):
+        for i in (0, 1, 2, 3, 4):
             if (move.axes_d[i]
                 and (end_pos[i] < self.limits[i][0]
                      or end_pos[i] > self.limits[i][1])):
@@ -83,10 +83,12 @@ class CoreXYKinematics:
                 raise move.move_error()
     def check_move(self, move):
         limits = self.limits
-        upos, vpos = move.end_pos[:2]
-        if (upos < limits[0][0] or upos > limits[0][1]
-            or vpos < limits[1][0] or vpos > limits[1][1]):
+        xpos, ypos = move.end_pos[:2]
+
+	if (xpos < limits[0][0] or xpos > limits[0][1]
+            or ypos < limits[1][0] or ypos > limits[1][1]):
             self._check_endstops(move)
+
         if not move.axes_d[2]:
             # Normal XY move - use defaults
             return
@@ -96,7 +98,7 @@ class CoreXYKinematics:
         move.limit_speed(
             self.max_z_velocity * z_ratio, self.max_z_accel * z_ratio)
     def get_status(self, eventtime):
-        axes = [a for a, (l, h) in zip("uvzxy", self.limits) if l <= h]
+        axes = [a for a, (l, h) in zip("xyzuv", self.limits) if l <= h]
         return {
             'homed_axes': "".join(axes),
             'axis_minimum': self.axes_min,
