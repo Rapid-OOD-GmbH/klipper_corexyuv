@@ -186,7 +186,7 @@ class GCodeDispatch:
             cmd = ""
             if numparts >= 3 and parts[1] != 'N':
                 cmd = parts[1] + parts[2].strip()
-            elif numparts >= 5 and parts[1] == 'N':
+            elif numparts >= 7 and parts[1] == 'N':
                 # Skip line number at start of command
                 cmd = parts[3] + parts[4].strip()
             # Build gcode "params" dictionary
