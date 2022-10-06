@@ -74,7 +74,7 @@ class CoreXYKinematics:
         self.limits = [(1.0, -1.0)] * 3
     def _check_endstops(self, move):
         end_pos = move.end_pos
-        for i in (0, 1, 2, 3, 4):
+        for i in (0, 1, 2):
             if (move.axes_d[i]
                 and (end_pos[i] < self.limits[i][0]
                      or end_pos[i] > self.limits[i][1])):
