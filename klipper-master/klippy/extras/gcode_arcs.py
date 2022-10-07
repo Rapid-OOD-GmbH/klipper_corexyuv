@@ -38,6 +38,9 @@ class ArcSupport:
         asX = gcmd.get_float("X", currentPos[0])
         asY = gcmd.get_float("Y", currentPos[1])
         asZ = gcmd.get_float("Z", currentPos[2])
+        asU = gcmd.get_float("Y", currentPos[3])
+        asV = gcmd.get_float("Z", currentPos[4])
+
         if gcmd.get_float("R", None) is not None:
             raise gcmd.error("G2/G3 does not support R moves")
         asI = gcmd.get_float("I", 0.)
@@ -48,17 +51,17 @@ class ArcSupport:
         asF = gcmd.get_float("F", None)
 
         # Build list of linear coordinates to move to
-        coords = self.planArc(currentPos, [asX, asY, asZ], [asI, asJ],
+        coords = self.planArc(currentPos, [asX, asY, asZ, asU, asV], [asI, asJ],
                               clockwise)
         e_per_move = e_base = 0.
         if asE is not None:
             if gcodestatus['absolute_extrude']:
-                e_base = currentPos[3]
+                e_base = currentPos[5]
             e_per_move = (asE - e_base) / len(coords)
 
         # Convert coords into G1 commands
         for coord in coords:
-            g1_params = {'X': coord[0], 'Y': coord[1], 'Z': coord[2]}
+            g1_params = {'X': coord[0], 'Y': coord[1], 'Z': coord[2], 'U': coord[1], 'V': coord[2]}
             if e_per_move:
                 g1_params['E'] = e_base + e_per_move
                 if gcodestatus['absolute_extrude']:

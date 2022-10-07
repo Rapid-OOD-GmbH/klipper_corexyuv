@@ -192,6 +192,7 @@ class GCodeDispatch:
             # Build gcode "params" dictionary
             params = { parts[i]: parts[i+1].strip()
                        for i in range(1, numparts, 2) }
+            logging.info(params)
             gcmd = GCodeCommand(self, cmd, origline, params, need_ack)
             # Invoke handler for command
             handler = self.gcode_handlers.get(cmd, self.cmd_default)

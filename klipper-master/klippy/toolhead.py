@@ -20,14 +20,14 @@ class Move:
         self.timing_callbacks = []
         velocity = min(speed, toolhead.max_velocity)
         self.is_kinematic_move = True
-        self.axes_d = axes_d = [end_pos[i] - start_pos[i] for i in (0, 1, 2, 3)]
-        self.move_d = move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+        self.axes_d = axes_d = [end_pos[i] - start_pos[i] for i in (0, 1, 2, 3, 4, 5)]
+        self.move_d = move_d = math.sqrt(sum([d*d for d in axes_d[:5]]))
         if move_d < .000000001:
             # Extrude only move
             self.end_pos = (start_pos[0], start_pos[1], start_pos[2],
-                            end_pos[3])
-            axes_d[0] = axes_d[1] = axes_d[2] = 0.
-            self.move_d = move_d = abs(axes_d[3])
+                            end_pos[3], start_pos[4], start_pos[5])
+            axes_d[0] = axes_d[1] = axes_d[2] = axes_d[3] = axes_d[4] = 0.
+            self.move_d = move_d = abs(axes_d[5])
             inv_move_d = 0.
             if move_d:
                 inv_move_d = 1. / move_d
@@ -56,7 +56,7 @@ class Move:
         self.smooth_delta_v2 = min(self.smooth_delta_v2, self.delta_v2)
     def move_error(self, msg="Move out of range"):
         ep = self.end_pos
-        m = "%s: %.3f %.3f %.3f [%.3f]" % (msg, ep[0], ep[1], ep[2], ep[3])
+        m = "%s: %.3f %.3f %.3f %.3f %.3f [%.3f]" % (msg, ep[0], ep[1], ep[2], ep[3], ep[4], ep[5])
         return self.toolhead.printer.command_error(m)
     def calc_junction(self, prev_move):
         if not self.is_kinematic_move or not prev_move.is_kinematic_move:
@@ -68,7 +68,7 @@ class Move:
         prev_axes_r = prev_move.axes_r
         junction_cos_theta = -(axes_r[0] * prev_axes_r[0]
                                + axes_r[1] * prev_axes_r[1]
-                               + axes_r[2] * prev_axes_r[2])
+                               + axes_r[2] * prev_axes_r[2] + axes_r[3] * prev_axes_r[3] + axes_r[4] * prev_axes_r[4])
         if junction_cos_theta > 0.999999:
             return
         junction_cos_theta = max(junction_cos_theta, -0.999999)
@@ -206,7 +206,7 @@ class ToolHead:
         if self.mcu.is_fileoutput():
             self.can_pause = False
         self.move_queue = MoveQueue(self)
-        self.commanded_pos = [0., 0., 0., 0.]
+        self.commanded_pos = [0., 0., 0., 0., 0., 0.]
         self.printer.register_event_handler("klippy:shutdown",
                                             self._handle_shutdown)
         # Velocity and acceleration control

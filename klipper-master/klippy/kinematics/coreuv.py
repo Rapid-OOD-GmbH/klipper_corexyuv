@@ -23,8 +23,8 @@ class CoreXYKinematics:
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
-	self.rails[3].setup_itersolve('corexy_stepper_alloc', b'+')
-        self.rails[4].setup_itersolve('corexy_stepper_alloc', b'-')
+	self.rails[3].setup_itersolve('cartesian_stepper_alloc', b'x')
+        self.rails[4].setup_itersolve('cartesian_stepper_alloc', b'y')
 
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
@@ -74,7 +74,7 @@ class CoreXYKinematics:
         self.limits = [(1.0, -1.0)] * 3
     def _check_endstops(self, move):
         end_pos = move.end_pos
-        for i in (0, 1, 2):
+        for i in (0, 1, 2, 3, 4):
             if (move.axes_d[i]
                 and (end_pos[i] < self.limits[i][0]
                      or end_pos[i] > self.limits[i][1])):
@@ -84,9 +84,14 @@ class CoreXYKinematics:
     def check_move(self, move):
         limits = self.limits
         xpos, ypos = move.end_pos[:2]
+        upos, vpos = move.end_pos[3:5]
+	logging.info(limits)
 
 	if (xpos < limits[0][0] or xpos > limits[0][1]
             or ypos < limits[1][0] or ypos > limits[1][1]):
+            self._check_endstops(move)
+ 	if (upos < limits[0][0] or upos > limits[0][1]
+            or vpos < limits[1][0] or vpos > limits[1][1]):
             self._check_endstops(move)
 
         if not move.axes_d[2]:
