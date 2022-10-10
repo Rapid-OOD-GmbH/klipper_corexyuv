@@ -23,8 +23,8 @@ class CoreXYKinematics:
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
-	self.rails[3].setup_itersolve('cartesian_stepper_alloc', b'x')
-        self.rails[4].setup_itersolve('cartesian_stepper_alloc', b'y')
+	self.rails[3].setup_itersolve('coreuv_stepper_alloc', b'+')
+        self.rails[4].setup_itersolve('coreuv_stepper_alloc', b'-')
 
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
