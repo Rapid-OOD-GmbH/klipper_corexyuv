@@ -24,17 +24,17 @@ move_alloc(void)
 void __visible
 trapq_append(struct trapq *tq, double print_time
              , double accel_t, double cruise_t, double decel_t
-             , double start_pos_x, double start_pos_y, double start_pos_z
-             , double axes_r_x, double axes_r_y, double axes_r_z
+             , double start_pos_x, double start_pos_y, double start_pos_z, double start_pos_u, double start_pos_v 
+             , double axes_r_x, double axes_r_y, double axes_r_z, double axes_r_u, double axes_r_v
              , double start_v, double cruise_v, double accel)
 {
-    struct coord start_pos = { .x=start_pos_x, .y=start_pos_y, .z=start_pos_z };
-    struct coord axes_r = { .x=axes_r_x, .y=axes_r_y, .z=axes_r_z };
+    struct coord start_pos = { .x=start_pos_x, .y=start_pos_y, .z=start_pos_z,  .x=start_pos_u, .y=start_pos_v };
+    struct coord axes_r = { .x=axes_r_x, .y=axes_r_y, .z=axes_r_z, .x=axes_r_u, .y=axes_r_v };
     if (accel_t) {
         struct move *m = move_alloc();
         m->print_time = print_time;
         m->move_t = accel_t;
-        m->start_v = start_v;
+        m->start_vv = start_v;
         m->half_accel = .5 * accel;
         m->start_pos = start_pos;
         m->axes_r = axes_r;
@@ -47,7 +47,7 @@ trapq_append(struct trapq *tq, double print_time
         struct move *m = move_alloc();
         m->print_time = print_time;
         m->move_t = cruise_t;
-        m->start_v = cruise_v;
+        m->start_vv = cruise_v;
         m->half_accel = 0.;
         m->start_pos = start_pos;
         m->axes_r = axes_r;
@@ -60,7 +60,7 @@ trapq_append(struct trapq *tq, double print_time
         struct move *m = move_alloc();
         m->print_time = print_time;
         m->move_t = decel_t;
-        m->start_v = cruise_v;
+        m->start_vv = cruise_v;
         m->half_accel = -.5 * accel;
         m->start_pos = start_pos;
         m->axes_r = axes_r;
@@ -72,10 +72,10 @@ trapq_append(struct trapq *tq, double print_time
 inline double
 move_get_distance(struct move *m, double move_time)
 {
-    return (m->start_v + m->half_accel * move_time) * move_time;
+    return (m->start_vv + m->half_accel * move_time) * move_time;
 }
 
-// Return the XYZ coordinates given a time in a move
+// Return the XYZUV coordinates given a time in a move
 inline struct coord
 move_get_coord(struct move *m, double move_time)
 {
@@ -83,7 +83,9 @@ move_get_coord(struct move *m, double move_time)
     return (struct coord) {
         .x = m->start_pos.x + m->axes_r.x * move_dist,
         .y = m->start_pos.y + m->axes_r.y * move_dist,
-        .z = m->start_pos.z + m->axes_r.z * move_dist };
+        .z = m->start_pos.z + m->axes_r.z * move_dist,
+	.u = m->start_pos.u + m->axes_r.u * move_dist,
+        .v = m->start_pos.v + m->axes_r.v * move_dist };
 }
 
 #define NEVER_TIME 9999999999999999.9
@@ -181,7 +183,7 @@ trapq_finalize_moves(struct trapq *tq, double print_time)
         if (m->print_time + m->move_t > print_time)
             break;
         list_del(&m->node);
-        if (m->start_v || m->half_accel)
+        if (m->start_vv || m->half_accel)
             list_add_head(&m->node, &tq->history);
         else
             free(m);
@@ -203,7 +205,7 @@ trapq_finalize_moves(struct trapq *tq, double print_time)
 // Note a position change in the trapq history
 void __visible
 trapq_set_position(struct trapq *tq, double print_time
-                   , double pos_x, double pos_y, double pos_z)
+                   , double pos_x, double pos_y, double pos_z, double pos_u, double pos_v)
 {
     // Flush all moves from trapq
     trapq_finalize_moves(tq, NEVER_TIME);
@@ -226,6 +228,8 @@ trapq_set_position(struct trapq *tq, double print_time
     m->start_pos.x = pos_x;
     m->start_pos.y = pos_y;
     m->start_pos.z = pos_z;
+    m->start_pos.y = pos_u;
+    m->start_pos.z = pos_v;
     list_add_head(&m->node, &tq->history);
 }
 
@@ -243,14 +247,18 @@ trapq_extract_old(struct trapq *tq, struct pull_move *p, int max
             continue;
         p->print_time = m->print_time;
         p->move_t = m->move_t;
-        p->start_v = m->start_v;
+        p->start_v = m->start_vv;
         p->accel = 2. * m->half_accel;
         p->start_x = m->start_pos.x;
         p->start_y = m->start_pos.y;
         p->start_z = m->start_pos.z;
+	p->start_u = m->start_pos.u;
+        p->start_v = m->start_pos.v;
         p->x_r = m->axes_r.x;
         p->y_r = m->axes_r.y;
         p->z_r = m->axes_r.z;
+	p->u_r = m->axes_r.u;
+        p->v_r = m->axes_r.v;
         p++;
         res++;
     }

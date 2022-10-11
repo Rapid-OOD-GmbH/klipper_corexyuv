@@ -255,22 +255,25 @@ itersolve_set_stepcompress(struct stepper_kinematics *sk
 
 double __visible
 itersolve_calc_position_from_coord(struct stepper_kinematics *sk
-                                   , double x, double y, double z)
+                                   , double x, double y, double z, double u, double v)
 {
     struct move m;
     memset(&m, 0, sizeof(m));
     m.start_pos.x = x;
     m.start_pos.y = y;
     m.start_pos.z = z;
+    m.start_pos.u = u;
+    m.start_pos.v = v;
+
     m.move_t = 1000.;
     return sk->calc_position_cb(sk, &m, 500.);
 }
 
 void __visible
 itersolve_set_position(struct stepper_kinematics *sk
-                       , double x, double y, double z)
+                       , double x, double y, double z, double u, double v)
 {
-    sk->commanded_pos = itersolve_calc_position_from_coord(sk, x, y, z);
+    sk->commanded_pos = itersolve_calc_position_from_coord(sk, x, y, z, u, v);
 }
 
 double __visible

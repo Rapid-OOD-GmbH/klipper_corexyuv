@@ -63,8 +63,8 @@ pa_move_integrate(struct move *m, double pressure_advance
     int can_pressure_advance = m->axes_r.y != 0.;
     if (!can_pressure_advance)
         pressure_advance = 0.;
-    base += pressure_advance * m->start_v;
-    double start_v = m->start_v + pressure_advance * 2. * m->half_accel;
+    base += pressure_advance * m->start_vv;
+    double start_v = m->start_vv + pressure_advance * 2. * m->half_accel;
     // Calculate definitive integral
     double ha = m->half_accel;
     double iext = extruder_integrate(base, start_v, ha, start, end);
