@@ -26,15 +26,15 @@ trapq_append(struct trapq *tq, double print_time
              , double accel_t, double cruise_t, double decel_t
              , double start_pos_x, double start_pos_y, double start_pos_z, double start_pos_u, double start_pos_v 
              , double axes_r_x, double axes_r_y, double axes_r_z, double axes_r_u, double axes_r_v
-             , double start_v, double cruise_v, double accel)
+             , double start_vv, double cruise_v, double accel)
 {
-    struct coord start_pos = { .x=start_pos_x, .y=start_pos_y, .z=start_pos_z,  .x=start_pos_u, .y=start_pos_v };
-    struct coord axes_r = { .x=axes_r_x, .y=axes_r_y, .z=axes_r_z, .x=axes_r_u, .y=axes_r_v };
+    struct coord start_pos = { .x=start_pos_x, .y=start_pos_y, .z=start_pos_z,  .u=start_pos_u, .v=start_pos_v };
+    struct coord axes_r = { .x=axes_r_x, .y=axes_r_y, .z=axes_r_z, .u=axes_r_u, .v=axes_r_v };
     if (accel_t) {
         struct move *m = move_alloc();
         m->print_time = print_time;
         m->move_t = accel_t;
-        m->start_vv = start_v;
+        m->start_vv = start_vv;
         m->half_accel = .5 * accel;
         m->start_pos = start_pos;
         m->axes_r = axes_r;
@@ -228,8 +228,8 @@ trapq_set_position(struct trapq *tq, double print_time
     m->start_pos.x = pos_x;
     m->start_pos.y = pos_y;
     m->start_pos.z = pos_z;
-    m->start_pos.y = pos_u;
-    m->start_pos.z = pos_v;
+    m->start_pos.u = pos_u;
+    m->start_pos.v = pos_v;
     list_add_head(&m->node, &tq->history);
 }
 
@@ -247,7 +247,7 @@ trapq_extract_old(struct trapq *tq, struct pull_move *p, int max
             continue;
         p->print_time = m->print_time;
         p->move_t = m->move_t;
-        p->start_v = m->start_vv;
+        p->start_vv = m->start_vv;
         p->accel = 2. * m->half_accel;
         p->start_x = m->start_pos.x;
         p->start_y = m->start_pos.y;
