@@ -23,8 +23,8 @@ class CoreXYKinematics:
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
-	self.rails[3].setup_itersolve('corexy_stepper_alloc', b'+')
-        self.rails[4].setup_itersolve('corexy_stepper_alloc', b'-')
+	self.rails[3].setup_itersolve('coreuv_stepper_alloc', b'+')
+        self.rails[4].setup_itersolve('coreuv_stepper_alloc', b'-')
 
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
@@ -45,7 +45,7 @@ class CoreXYKinematics:
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
-        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2]]
+        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0.5 * (pos[3] + pos[4]), 0.5 * (pos[3] - pos[4])]
     def set_position(self, newpos, homing_axes):
         for i, rail in enumerate(self.rails):
             rail.set_position(newpos)

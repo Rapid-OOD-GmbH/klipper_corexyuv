@@ -139,7 +139,8 @@ check_active(struct stepper_kinematics *sk, struct move *m)
     int af = sk->active_flags;
     return ((af & AF_X && m->axes_r.x != 0.)
             || (af & AF_Y && m->axes_r.y != 0.)
-            || (af & AF_Z && m->axes_r.z != 0.));
+            || (af & AF_Z && m->axes_r.z != 0.)|| (af & AF_U && m->axes_r.u != 0.)
+            || (af & AF_V && m->axes_r.v != 0.));
 }
 
 // Generate step times for a range of moves on the trapq
