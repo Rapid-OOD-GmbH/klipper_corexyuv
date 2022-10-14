@@ -28,10 +28,10 @@
 // Calculate the definitive integral of the motion formula:
 //   position(t) = base + t * (start_v + t * half_accel)
 static double
-extruder_integrate(double base, double start_v, double half_accel
+extruder_integrate(double base, double start_vv, double half_accel
                    , double start, double end)
 {
-    double half_v = .5 * start_v, sixth_a = (1. / 3.) * half_accel;
+    double half_v = .5 * start_vv, sixth_a = (1. / 3.) * half_accel;
     double si = start * (base + start * (half_v + start * sixth_a));
     double ei = end * (base + end * (half_v + end * sixth_a));
     return ei - si;
@@ -40,10 +40,10 @@ extruder_integrate(double base, double start_v, double half_accel
 // Calculate the definitive integral of time weighted position:
 //   weighted_position(t) = t * (base + t * (start_v + t * half_accel))
 static double
-extruder_integrate_time(double base, double start_v, double half_accel
+extruder_integrate_time(double base, double start_vv, double half_accel
                         , double start, double end)
 {
-    double half_b = .5 * base, third_v = (1. / 3.) * start_v;
+    double half_b = .5 * base, third_v = (1. / 3.) * start_vv;
     double eighth_a = .25 * half_accel;
     double si = start * start * (half_b + start * (third_v + start * eighth_a));
     double ei = end * end * (half_b + end * (third_v + end * eighth_a));
@@ -64,11 +64,11 @@ pa_move_integrate(struct move *m, double pressure_advance
     if (!can_pressure_advance)
         pressure_advance = 0.;
     base += pressure_advance * m->start_vv;
-    double start_v = m->start_vv + pressure_advance * 2. * m->half_accel;
+    double start_vv = m->start_vv + pressure_advance * 2. * m->half_accel;
     // Calculate definitive integral
     double ha = m->half_accel;
-    double iext = extruder_integrate(base, start_v, ha, start, end);
-    double wgt_ext = extruder_integrate_time(base, start_v, ha, start, end);
+    double iext = extruder_integrate(base, start_vv, ha, start, end);
+    double wgt_ext = extruder_integrate_time(base, start_vv, ha, start, end);
     return wgt_ext - time_offset * iext;
 }
 

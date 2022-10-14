@@ -3,45 +3,34 @@
 # Copyright (C) 2017-2021  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import logging
+import logging, math
 import stepper
-from . import idex_modes
 
-class CoreXYKinematics:
+class CoreXYUVKinematics:
     def __init__(self, toolhead, config):
-
-        self.printer = config.get_printer()
-        printer_config = config.getsection('printer')
-        # itersolve parameters
-        self.rails = [ stepper.LookupMultiRail(config.getsection('stepper_x')),
-                       stepper.LookupMultiRail(config.getsection('stepper_y')),
-                       stepper.LookupMultiRail(config.getsection('stepper_z')),
-                       stepper.LookupMultiRail(config.getsection('stepper_u')),
-                       stepper.LookupMultiRail(config.getsection('stepper_v')),
-                       ]
+        # Setup axis rails
+        self.rails = [stepper.LookupMultiRail(config.getsection('stepper_' + n))
+                      for n in 'xyzuv']
         for s in self.rails[1].get_steppers():
             self.rails[0].get_endstops()[0][0].add_stepper(s)
         for s in self.rails[0].get_steppers():
             self.rails[1].get_endstops()[0][0].add_stepper(s)
-        for s in self.rails[4].get_steppers():
+	for s in self.rails[4].get_steppers():
             self.rails[3].get_endstops()[0][0].add_stepper(s)
         for s in self.rails[3].get_steppers():
             self.rails[4].get_endstops()[0][0].add_stepper(s)
 
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
-        self.rails[1].setup_itersolve('cartesian_stepper_alloc', b'-')
+        self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
-        self.rails[3].setup_itersolve('corexy_stepper_alloc', b'+')
-        self.rails[4].setup_itersolve('cartesian_stepper_alloc', b'-')
-        ranges = [r.get_range() for r in self.rails]
-        self.axes_min = toolhead.Coord(*[r[0] for r in ranges[:3]], e=0.)
-        self.axes_max = toolhead.Coord(*[r[1] for r in ranges[:3]], e=0.)
+	self.rails[3].setup_itersolve('coreuv_stepper_alloc', b'+')
+        self.rails[4].setup_itersolve('coreuv_stepper_alloc', b'-')
+
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
             toolhead.register_step_generator(s.generate_steps)
-        self.printer.register_event_handler("stepper_enable:motor_off",
+        config.get_printer().register_event_handler("stepper_enable:motor_off",
                                                     self._motor_off)
-
         # Setup boundary checks
         max_velocity, max_accel = toolhead.get_max_velocity()
         self.max_z_velocity = config.getfloat(
@@ -49,13 +38,14 @@ class CoreXYKinematics:
         self.max_z_accel = config.getfloat(
             'max_z_accel', max_accel, above=0., maxval=max_accel)
         self.limits = [(1.0, -1.0)] * 3
-
+        ranges = [r.get_range() for r in self.rails]
+        self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
+        self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
     def get_steppers(self):
         return [s for rail in self.rails for s in rail.get_steppers()]
-    # TODO
     def calc_position(self, stepper_positions):
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
-        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2]]
+        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0.5 * (pos[3] + pos[4]), 0.5 * (pos[3] - pos[4])]
     def set_position(self, newpos, homing_axes):
         for i, rail in enumerate(self.rails):
             rail.set_position(newpos)
@@ -64,9 +54,6 @@ class CoreXYKinematics:
     def note_z_not_homed(self):
         # Helper for Safe Z Home
         self.limits[2] = (1.0, -1.0)
-    
-    #TODO: home all axis (u and v)
-
     def home(self, homing_state):
         # Each axis is homed independently and in order
         for axis in homing_state.get_axes():
@@ -74,7 +61,7 @@ class CoreXYKinematics:
             # Determine movement
             position_min, position_max = rail.get_range()
             hi = rail.get_homing_info()
-            homepos = [None, None, None, None]
+            homepos = [None, None, None, None, None, None]
             homepos[axis] = hi.position_endstop
             forcepos = list(homepos)
             if hi.positive_dir:
@@ -98,12 +85,13 @@ class CoreXYKinematics:
         limits = self.limits
         xpos, ypos = move.end_pos[:2]
         upos, vpos = move.end_pos[3:5]
-        if (xpos < limits[0][0] or xpos > limits[0][1]
+	logging.info(limits)
+
+	if (xpos < limits[0][0] or xpos > limits[0][1]
             or ypos < limits[1][0] or ypos > limits[1][1]):
             self._check_endstops(move)
-        
-        if (upos < limits[3][0] or upos > limits[3][1]
-            or vpos < limits[4][0] or vpos > limits[4][1]):
+ 	if (upos < limits[0][0] or upos > limits[0][1]
+            or vpos < limits[1][0] or vpos > limits[1][1]):
             self._check_endstops(move)
 
         if not move.axes_d[2]:
@@ -123,4 +111,4 @@ class CoreXYKinematics:
         }
 
 def load_kinematics(toolhead, config):
-    return CoreXYKinematics(toolhead, config)
+    return CoreXYUVKinematics(toolhead, config)
