@@ -108,8 +108,7 @@ defs_kin_corexy = """
     struct stepper_kinematics *corexy_stepper_alloc(char type);
 """
 
-defs_kin_corexyuv = """
-    struct stepper_kinematics *corexy_stepper_alloc(char type);
+defs_kin_coreuv = """
     struct stepper_kinematics *coreuv_stepper_alloc(char type);
 """
 
