@@ -49,7 +49,6 @@ class GCodeMove:
         self.saved_states = {}
         self.move_transform = self.move_with_transform = None
         self.position_with_transform = (lambda: [0., 0., 0., 0., 0., 0.])
-        logging.info(self.last_position)
     def _handle_ready(self):
         self.is_printer_ready = True
         if self.move_transform is None:
@@ -118,7 +117,6 @@ class GCodeMove:
             for pos, axis in enumerate('XYZUV'):
                 if axis in params:
                     v = float(params[axis])
-                    logging.info(self.last_position)
                     if not self.absolute_coord:
                         # value relative to position of last move
                         self.last_position[pos] += v
@@ -129,7 +127,6 @@ class GCodeMove:
                 v = float(params['E']) * self.extrude_factor
                 if not self.absolute_coord or not self.absolute_extrude:
                     # value relative to position of last move
-                    logging.info(self.last_position)
                     self.last_position[5] += v
                 else:
                     # value relative to base coordinate position

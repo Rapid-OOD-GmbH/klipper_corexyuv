@@ -85,7 +85,6 @@ class CoreXYUVKinematics:
         limits = self.limits
         xpos, ypos = move.end_pos[:2]
         upos, vpos = move.end_pos[3:5]
-	logging.info(limits)
 
 	if (xpos < limits[0][0] or xpos > limits[0][1]
             or ypos < limits[1][0] or ypos > limits[1][1]):
