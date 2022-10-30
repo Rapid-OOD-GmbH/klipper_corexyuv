@@ -6,26 +6,18 @@
 import logging, math
 import stepper
 
-class CoreXYUVKinematics:
+class CoreXYKinematics:
     def __init__(self, toolhead, config):
         # Setup axis rails
         self.rails = [stepper.LookupMultiRail(config.getsection('stepper_' + n))
-                      for n in 'xyzuv']
+                      for n in 'xyz']
         for s in self.rails[1].get_steppers():
             self.rails[0].get_endstops()[0][0].add_stepper(s)
         for s in self.rails[0].get_steppers():
             self.rails[1].get_endstops()[0][0].add_stepper(s)
-	for s in self.rails[4].get_steppers():
-            self.rails[3].get_endstops()[0][0].add_stepper(s)
-        for s in self.rails[3].get_steppers():
-            self.rails[4].get_endstops()[0][0].add_stepper(s)
-
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
-	self.rails[3].setup_itersolve('coreuv_stepper_alloc', b'+')
-        self.rails[4].setup_itersolve('coreuv_stepper_alloc', b'-')
-
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
             toolhead.register_step_generator(s.generate_steps)
@@ -37,7 +29,7 @@ class CoreXYUVKinematics:
             'max_z_velocity', max_velocity, above=0., maxval=max_velocity)
         self.max_z_accel = config.getfloat(
             'max_z_accel', max_accel, above=0., maxval=max_accel)
-        self.limits = [(1.0, -1.0)] * 5
+        self.limits = [(1.0, -1.0)] * 3
         ranges = [r.get_range() for r in self.rails]
         self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
         self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
@@ -45,10 +37,9 @@ class CoreXYUVKinematics:
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
-        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0.5 * (pos[3] + pos[4]), 0.5 * (pos[3] - pos[4])]
+        return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2]]
     def set_position(self, newpos, homing_axes):
         for i, rail in enumerate(self.rails):
-	    logging.warning(self.rails)
             rail.set_position(newpos)
             if i in homing_axes:
                 self.limits[i] = rail.get_range()
@@ -62,7 +53,7 @@ class CoreXYUVKinematics:
             # Determine movement
             position_min, position_max = rail.get_range()
             hi = rail.get_homing_info()
-            homepos = [None, None, None, None, None, None]
+            homepos = [None, None, None, None]
             homepos[axis] = hi.position_endstop
             forcepos = list(homepos)
             if hi.positive_dir:
@@ -75,7 +66,7 @@ class CoreXYUVKinematics:
         self.limits = [(1.0, -1.0)] * 3
     def _check_endstops(self, move):
         end_pos = move.end_pos
-        for i in (0, 1, 2, 3, 4):
+        for i in (0, 1, 2):
             if (move.axes_d[i]
                 and (end_pos[i] < self.limits[i][0]
                      or end_pos[i] > self.limits[i][1])):
@@ -85,15 +76,9 @@ class CoreXYUVKinematics:
     def check_move(self, move):
         limits = self.limits
         xpos, ypos = move.end_pos[:2]
-        upos, vpos = move.end_pos[3:5]
-
-	if (xpos < limits[0][0] or xpos > limits[0][1]
+        if (xpos < limits[0][0] or xpos > limits[0][1]
             or ypos < limits[1][0] or ypos > limits[1][1]):
             self._check_endstops(move)
- 	if (upos < limits[0][0] or upos > limits[0][1]
-            or vpos < limits[1][0] or vpos > limits[1][1]):
-            self._check_endstops(move)
-
         if not move.axes_d[2]:
             # Normal XY move - use defaults
             return
@@ -103,7 +88,7 @@ class CoreXYUVKinematics:
         move.limit_speed(
             self.max_z_velocity * z_ratio, self.max_z_accel * z_ratio)
     def get_status(self, eventtime):
-        axes = [a for a, (l, h) in zip("xyzuv", self.limits) if l <= h]
+        axes = [a for a, (l, h) in zip("xyz", self.limits) if l <= h]
         return {
             'homed_axes': "".join(axes),
             'axis_minimum': self.axes_min,
@@ -111,4 +96,4 @@ class CoreXYUVKinematics:
         }
 
 def load_kinematics(toolhead, config):
-    return CoreXYUVKinematics(toolhead, config)
+    return CoreXYKinematics(toolhead, config)
