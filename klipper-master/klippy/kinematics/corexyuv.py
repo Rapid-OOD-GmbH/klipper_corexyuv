@@ -48,7 +48,6 @@ class CoreXYUVKinematics:
         return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0.5 * (pos[3] + pos[4]), 0.5 * (pos[3] - pos[4])]
     def set_position(self, newpos, homing_axes):
         for i, rail in enumerate(self.rails):
-	    logging.warning(self.rails)
             rail.set_position(newpos)
             if i in homing_axes:
                 self.limits[i] = rail.get_range()
