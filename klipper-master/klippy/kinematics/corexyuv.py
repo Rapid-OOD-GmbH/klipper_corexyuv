@@ -39,8 +39,8 @@ class CoreXYUVKinematics:
             'max_z_accel', max_accel, above=0., maxval=max_accel)
         self.limits = [(1.0, -1.0)] * 5
         ranges = [r.get_range() for r in self.rails]
-        self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
-        self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
+        self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0., w=0.)
+        self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0., w=0.)
     def get_steppers(self):
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
@@ -61,7 +61,7 @@ class CoreXYUVKinematics:
             # Determine movement
             position_min, position_max = rail.get_range()
             hi = rail.get_homing_info()
-            homepos = [None, None, None, None, None, None]
+            homepos = [None, None, None, None, None, None, None]
             homepos[axis] = hi.position_endstop
             forcepos = list(homepos)
             if hi.positive_dir:

@@ -9,7 +9,7 @@ class CommandError(Exception):
     pass
 
 #Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'e'))
-Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'u', 'v', 'e'))
+Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'u', 'v', 'e', 'w'))
 
 class GCodeCommand:
     error = CommandError
@@ -30,7 +30,7 @@ class GCodeCommand:
     def get_raw_command_parameters(self):
         command = self._command
         if command.startswith("M117 ") or command.startswith("M118 "):
-            command = command[:6]
+            command = command[:4]
         rawparams = self._commandline
         urawparams = rawparams.upper()
         if not urawparams.startswith(command):

@@ -239,7 +239,7 @@ class PrinterMotionReport:
         self.next_status_time = 0.
         gcode = self.printer.lookup_object('gcode')
         self.last_status = {
-            'live_position': gcode.Coord(0., 0., 0., 0., 0., 0.),
+            'live_position': gcode.Coord(0., 0., 0., 0., 0., 0., 0.),
             'live_velocity': 0., 'live_extruder_velocity': 0.,
             'steppers': [], 'trapq': [],
         }
@@ -305,7 +305,7 @@ class PrinterMotionReport:
             return self.last_status
         self.next_status_time = eventtime + STATUS_REFRESH_TIME
         xyzuvpos = (0., 0., 0., 0., 0.)
-        epos = (0.,)
+        epos = (0.,0.)
         xyzuvvelocity = evelocity = 0.
         # Calculate current requested toolhead position
         mcu = self.printer.lookup_object('mcu')
