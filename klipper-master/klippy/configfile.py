@@ -13,6 +13,7 @@ class sentinel:
 class ConfigWrapper:
     error = configparser.Error
     def __init__(self, printer, fileconfig, access_tracking, section):
+	logging.info("[log]configfile.py/ConfigWrapper")
         self.printer = printer
         self.fileconfig = fileconfig
         self.access_tracking = access_tracking
@@ -80,11 +81,15 @@ class ConfigWrapper:
     def getlists(self, option, default=sentinel, seps=(',',), count=None,
                  parser=str, note_valid=True):
         def lparser(value, pos):
+            if len(value.strip()) == 0:
+                # Return an empty list instead of [''] for empty string
+                parts = []
+            else:
+                parts = [p.strip() for p in value.split(seps[pos])]
             if pos:
                 # Nested list
-                parts = [p.strip() for p in value.split(seps[pos])]
                 return tuple([lparser(p, pos - 1) for p in parts if p])
-            res = [parser(p.strip()) for p in value.split(seps[pos])]
+            res = [parser(p) for p in parts]
             if count is not None and len(res) != count:
                 raise error("Option '%s' in section '%s' must have %d elements"
                             % (option, self.section, count))
@@ -136,6 +141,7 @@ AUTOSAVE_HEADER = """
 
 class PrinterConfig:
     def __init__(self, printer):
+	logging.info("[log]configfile.py/PrinterConfig")
         self.printer = printer
         self.autosave = None
         self.deprecated = {}

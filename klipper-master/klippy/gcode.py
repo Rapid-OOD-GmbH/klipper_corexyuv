@@ -8,12 +8,12 @@ import os, re, logging, collections, shlex
 class CommandError(Exception):
     pass
 
-#Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'e'))
-Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'u', 'v', 'e', 'w'))
+Coord = collections.namedtuple('Coord', ('x', 'y', 'z', 'e'))
 
 class GCodeCommand:
     error = CommandError
     def __init__(self, gcode, command, commandline, params, need_ack):
+        logging.info("[log]gcode.py/GCodeCommand")
         self._command = command
         self._commandline = commandline
         self._params = params
@@ -91,6 +91,7 @@ class GCodeDispatch:
     error = CommandError
     Coord = Coord
     def __init__(self, printer):
+	logging.info("[log]gcode.py/GCodeDispatch")
         self.printer = printer
         self.is_fileinput = not not printer.get_start_args().get("debuginput")
         printer.register_event_handler("klippy:ready", self._handle_ready)
@@ -186,7 +187,7 @@ class GCodeDispatch:
             cmd = ""
             if numparts >= 3 and parts[1] != 'N':
                 cmd = parts[1] + parts[2].strip()
-            elif numparts >= 7 and parts[1] == 'N':
+            elif numparts >= 5 and parts[1] == 'N':
                 # Skip line number at start of command
                 cmd = parts[3] + parts[4].strip()
             # Build gcode "params" dictionary
@@ -279,7 +280,7 @@ class GCodeDispatch:
             return
         if cmd.startswith("M117 ") or cmd.startswith("M118 "):
             # Handle M117/M118 gcode with numeric and special characters
-            handler = self.gcode_handlers.get(cmd[:6], None)
+            handler = self.gcode_handlers.get(cmd[:4], None)
             if handler is not None:
                 handler(gcmd)
                 return
@@ -356,6 +357,7 @@ class GCodeDispatch:
 # Support reading gcode from a pseudo-tty interface
 class GCodeIO:
     def __init__(self, printer):
+	logging.info("[log]gcode.py/GCodeIO")
         self.printer = printer
         printer.register_event_handler("klippy:ready", self._handle_ready)
         printer.register_event_handler("klippy:shutdown", self._handle_shutdown)

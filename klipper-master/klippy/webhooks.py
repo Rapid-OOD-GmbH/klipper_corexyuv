@@ -28,6 +28,7 @@ if sys.version_info.major < 3:
 
 class WebRequestError(gcode.CommandError):
     def __init__(self, message,):
+	logging.info("[log]webhooks.py/WebRequestsError")
         Exception.__init__(self, message)
 
     def to_dict(self):
@@ -41,6 +42,7 @@ class Sentinel:
 class WebRequest:
     error = WebRequestError
     def __init__(self, client_conn, request):
+	logging.info("[log]webhooks.py/WebRequestError")
         self.client_conn = client_conn
         base_request = json.loads(request, object_hook=json_loads_byteify)
         if type(base_request) != dict:
@@ -103,6 +105,7 @@ class WebRequest:
 
 class ServerSocket:
     def __init__(self, webhooks, printer):
+	logging.info("[log]webhooks.py/ServerSocket")
         self.printer = printer
         self.webhooks = webhooks
         self.reactor = printer.get_reactor()
@@ -174,6 +177,7 @@ class ServerSocket:
 
 class ClientConnection:
     def __init__(self, server, sock):
+	logging.info("[log]webhooks.py/ClientConnection")
         self.printer = server.printer
         self.webhooks = server.webhooks
         self.reactor = server.reactor
@@ -296,6 +300,7 @@ class ClientConnection:
 
 class WebHooks:
     def __init__(self, printer):
+	logging.info("[log]webhooks.py/WebHooks")
         self.printer = printer
         self._endpoints = {"list_endpoints": self._handle_list_endpoints}
         self._remote_methods = {}
@@ -405,6 +410,7 @@ class WebHooks:
 
 class GCodeHelper:
     def __init__(self, printer):
+	logging.info("[log]webhooks.py/GCodeHelper")
         self.printer = printer
         self.gcode = printer.lookup_object("gcode")
         # Output subscription tracking
@@ -447,6 +453,7 @@ SUBSCRIPTION_REFRESH_TIME = .25
 
 class QueryStatusHelper:
     def __init__(self, printer):
+	logging.info("[log]webhooks.py/QueryStatusHelper")
         self.printer = printer
         self.clients = {}
         self.pending_queries = []

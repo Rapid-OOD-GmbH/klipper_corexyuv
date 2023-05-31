@@ -8,16 +8,23 @@ import stepper
 
 class CoreXYKinematics:
     def __init__(self, toolhead, config):
-        # Setup axis rails
         self.rails = [stepper.LookupMultiRail(config.getsection('stepper_' + n))
-                      for n in 'xyz']
+                      for n in 'xyzuv']
         for s in self.rails[1].get_steppers():
             self.rails[0].get_endstops()[0][0].add_stepper(s)
         for s in self.rails[0].get_steppers():
             self.rails[1].get_endstops()[0][0].add_stepper(s)
+	for s in self.rails[4].get_steppers():
+            self.rails[3].get_endstops()[0][0].add_stepper(s)
+        for s in self.rails[3].get_steppers():
+            self.rails[4].get_endstops()[0][0].add_stepper(s)
+
         self.rails[0].setup_itersolve('corexy_stepper_alloc', b'+')
         self.rails[1].setup_itersolve('corexy_stepper_alloc', b'-')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
+	self.rails[3].setup_itersolve('corexy_stepper_alloc', b'+')
+        self.rails[4].setup_itersolve('corexy_stepper_alloc', b'-')
+
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
             toolhead.register_step_generator(s.generate_steps)
@@ -30,7 +37,7 @@ class CoreXYKinematics:
         self.max_z_accel = config.getfloat(
             'max_z_accel', max_accel, above=0., maxval=max_accel)
         self.limits = [(1.0, -1.0)] * 3
-        ranges = [r.get_range() for r in self.rails]
+        ranges = [r.get_range() for r in self.rails][0:3]
         self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
         self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
     def get_steppers(self):

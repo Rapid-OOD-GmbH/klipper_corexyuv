@@ -12,12 +12,14 @@ _NEVER = 9999999999999999.
 
 class ReactorTimer:
     def __init__(self, callback, waketime):
+	#logging.info("[log]reactor.py/ReactorTimer")
         self.callback = callback
         self.waketime = waketime
 
 class ReactorCompletion:
     class sentinel: pass
     def __init__(self, reactor):
+	#logging.info("[log]reactor.py/ReactorCompletion")
         self.reactor = reactor
         self.result = self.sentinel
         self.waiting = []
@@ -39,6 +41,7 @@ class ReactorCompletion:
 
 class ReactorCallback:
     def __init__(self, reactor, callback, waketime):
+	logging.info("[log]reactor.py/ReactorCallback")
         self.reactor = reactor
         self.timer = reactor.register_timer(self.invoke, waketime)
         self.callback = callback
@@ -51,6 +54,7 @@ class ReactorCallback:
 
 class ReactorFileHandler:
     def __init__(self, fd, read_callback, write_callback):
+	logging.info("[log]reactor.py/ReactorFileHandler")
         self.fd = fd
         self.read_callback = read_callback
         self.write_callback = write_callback
@@ -59,11 +63,13 @@ class ReactorFileHandler:
 
 class ReactorGreenlet(greenlet.greenlet):
     def __init__(self, run):
+	logging.info("[log]reactor.py/ReactorGreenlet")
         greenlet.greenlet.__init__(self, run=run)
         self.timer = None
 
 class ReactorMutex:
     def __init__(self, reactor, is_locked):
+	logging.info("[log]reactor.py/ReactorMutex")
         self.reactor = reactor
         self.is_locked = is_locked
         self.next_pending = False
@@ -95,6 +101,7 @@ class SelectReactor:
     NOW = _NOW
     NEVER = _NEVER
     def __init__(self, gc_checking=False):
+	logging.info("[log]reactor.py/SelectReactor")
         # Main code
         self._process = False
         self.monotonic = chelper.get_ffi()[1].get_monotonic
@@ -308,6 +315,7 @@ class SelectReactor:
 
 class PollReactor(SelectReactor):
     def __init__(self, gc_checking=False):
+	logging.info("[log]reactor.py/SelectReactor")
         SelectReactor.__init__(self, gc_checking)
         self._poll = select.poll()
         self._fds = {}
@@ -359,6 +367,7 @@ class PollReactor(SelectReactor):
 
 class EPollReactor(SelectReactor):
     def __init__(self, gc_checking=False):
+	logging.info("[log]reactor.py/EPollReactor")
         SelectReactor.__init__(self, gc_checking)
         self._epoll = select.epoll()
         self._fds = {}

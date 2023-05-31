@@ -11,7 +11,7 @@ class TuningTower:
     def __init__(self, config):
         self.printer = config.get_printer()
         self.normal_transform = None
-        self.last_position = [0., 0., 0., 0., 0., 0.]
+        self.last_position = [0., 0., 0., 0.]
         self.last_z = self.start = self.factor = self.band = 0.
         self.last_command_value = None
         self.command_fmt = ""

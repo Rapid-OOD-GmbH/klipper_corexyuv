@@ -5,7 +5,7 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import sys, optparse, os, re, logging
-import util, reactor, serialhdl, pins, msgproto, clocksync
+import util, reactor, serialhdl, msgproto, clocksync
 
 help_txt = """
   This is a debugging console for the Klipper micro-controller.
@@ -32,6 +32,7 @@ re_eval = re.compile(r'\{(?P<eval>[^}]*)\}')
 
 class KeyboardReader:
     def __init__(self, reactor, serialport, baud, canbus_iface, canbus_nodeid):
+	logging.info("[log]console.py/KeyboardReader")
         self.serialport = serialport
         self.baud = baud
         self.canbus_iface = canbus_iface
@@ -43,7 +44,6 @@ class KeyboardReader:
         self.fd = sys.stdin.fileno()
         util.set_nonblock(self.fd)
         self.mcu_freq = 0
-        self.pins = pins.PinResolver(validate_aliases=False)
         self.data = ""
         reactor.register_fd(self.fd, self.process_kbd)
         reactor.register_callback(self.connect)
@@ -223,11 +223,7 @@ class KeyboardReader:
                 return None
             line = ''.join(evalparts)
             self.output("Eval: %s" % (line,))
-        try:
-            line = self.pins.update_command(line).strip()
-        except:
-            self.output("Unable to map pin: %s" % (line,))
-            return None
+        line = line.strip()
         if line:
             parts = line.split()
             if parts[0] in self.local_commands:

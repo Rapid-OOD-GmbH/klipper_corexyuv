@@ -8,6 +8,7 @@ import logging, logging.handlers, threading, queue, time
 # Class to forward all messages through a queue to a background thread
 class QueueHandler(logging.Handler):
     def __init__(self, queue):
+	logging.info("[log]queuelogger.py/QueueHandler")
         logging.Handler.__init__(self)
         self.queue = queue
     def emit(self, record):
@@ -23,6 +24,7 @@ class QueueHandler(logging.Handler):
 # Class to poll a queue in a background thread and log each message
 class QueueListener(logging.handlers.TimedRotatingFileHandler):
     def __init__(self, filename):
+	logging.info("[log]queuelogger.py/QueueListener")
         logging.handlers.TimedRotatingFileHandler.__init__(
             self, filename, when='midnight', backupCount=5)
         self.bg_queue = queue.Queue()

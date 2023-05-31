@@ -13,6 +13,7 @@ class error(Exception):
 
 class SerialReader:
     def __init__(self, reactor, warn_prefix=""):
+	logging.info("[log]serialhdl.py/SerialReader")
         self.reactor = reactor
         self.warn_prefix = warn_prefix
         # Serial port
@@ -226,6 +227,8 @@ class SerialReader:
         return self.reactor
     def get_msgparser(self):
         return self.msgparser
+    def get_serialqueue(self):
+        return self.serialqueue
     def get_default_command_queue(self):
         return self.default_cmd_queue
     # Serial response callbacks
@@ -300,6 +303,7 @@ class SerialReader:
 # Class to send a query command and return the received response
 class SerialRetryCommand:
     def __init__(self, serial, name, oid=None):
+	#logging.info("[log]serialhdl.py/SerialRetryCommand")
         self.serial = serial
         self.name = name
         self.oid = oid

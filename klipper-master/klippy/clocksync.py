@@ -11,6 +11,7 @@ TRANSMIT_EXTRA = .001
 
 class ClockSync:
     def __init__(self, reactor):
+	logging.info("[log]clocksync.py/ClockSync")
         self.reactor = reactor
         self.serial = None
         self.get_clock_timer = reactor.register_timer(self._get_clock_event)
@@ -165,6 +166,7 @@ class ClockSync:
 # primary MCU)
 class SecondarySync(ClockSync):
     def __init__(self, reactor, main_sync):
+	logging.info("[log]clocksync.py/SecondarySync")
         ClockSync.__init__(self, reactor)
         self.main_sync = main_sync
         self.clock_adj = (0., 1.)

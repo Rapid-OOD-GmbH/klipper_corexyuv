@@ -21,6 +21,7 @@ class MCU_stepper:
     def __init__(self, name, step_pin_params, dir_pin_params,
                  rotation_dist, steps_per_rotation,
                  step_pulse_duration=None, units_in_radians=False):
+	logging.info("[log]stepper.py/MCU_stepper")
         self._name = name
         self._rotation_dist = rotation_dist
         self._steps_per_rotation = steps_per_rotation
@@ -89,12 +90,12 @@ class MCU_stepper:
                                       invert_step, step_pulse_ticks))
         self._mcu.add_config_cmd("reset_step_clock oid=%d clock=0"
                                  % (self._oid,), on_restart=True)
-        step_cmd_tag = self._mcu.lookup_command_tag(
-            "queue_step oid=%c interval=%u count=%hu add=%hi")
-        dir_cmd_tag = self._mcu.lookup_command_tag(
-            "set_next_step_dir oid=%c dir=%c")
-        self._reset_cmd_tag = self._mcu.lookup_command_tag(
-            "reset_step_clock oid=%c clock=%u")
+        step_cmd_tag = self._mcu.lookup_command(
+            "queue_step oid=%c interval=%u count=%hu add=%hi").get_command_tag()
+        dir_cmd_tag = self._mcu.lookup_command(
+            "set_next_step_dir oid=%c dir=%c").get_command_tag()
+        self._reset_cmd_tag = self._mcu.lookup_command(
+            "reset_step_clock oid=%c clock=%u").get_command_tag()
         self._get_position_cmd = self._mcu.lookup_query_command(
             "stepper_get_position oid=%c",
             "stepper_position oid=%c pos=%i", oid=self._oid)
@@ -128,12 +129,12 @@ class MCU_stepper:
     def calc_position_from_coord(self, coord):
         ffi_main, ffi_lib = chelper.get_ffi()
         return ffi_lib.itersolve_calc_position_from_coord(
-            self._stepper_kinematics, coord[0], coord[1], coord[2], coord[3], coord[4])
+            self._stepper_kinematics, coord[0], coord[1], coord[2])
     def set_position(self, coord):
         mcu_pos = self.get_mcu_position()
         sk = self._stepper_kinematics
         ffi_main, ffi_lib = chelper.get_ffi()
-        ffi_lib.itersolve_set_position(sk, coord[0], coord[1], coord[2], coord[3], coord[4])
+        ffi_lib.itersolve_set_position(sk, coord[0], coord[1], coord[2])
         self._set_mcu_position(mcu_pos)
     def get_commanded_position(self):
         ffi_main, ffi_lib = chelper.get_ffi()
@@ -294,6 +295,7 @@ def parse_step_distance(config, units_in_radians=None, note_valid=False):
 class PrinterRail:
     def __init__(self, config, need_position_minmax=True,
                  default_position_endstop=None, units_in_radians=False):
+	logging.info("[log]stepper.py/PrinterRail")
         # Primary stepper and endstop
         self.stepper_units_in_radians = units_in_radians
         self.steppers = []

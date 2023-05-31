@@ -20,6 +20,7 @@ class ExtruderStepper:
         self.sk_extruder = ffi_main.gc(ffi_lib.extruder_stepper_alloc(),
                                        ffi_lib.free)
         self.stepper.set_stepper_kinematics(self.sk_extruder)
+        self.motion_queue = None
         # Register commands
         self.printer.register_event_handler("klippy:connect",
                                             self._handle_connect)
@@ -49,7 +50,8 @@ class ExtruderStepper:
         self._set_pressure_advance(self.config_pa, self.config_smooth_time)
     def get_status(self, eventtime):
         return {'pressure_advance': self.pressure_advance,
-                'smooth_time': self.pressure_advance_smooth_time}
+                'smooth_time': self.pressure_advance_smooth_time,
+                'motion_queue': self.motion_queue}
     def find_past_position(self, print_time):
         mcu_pos = self.stepper.get_past_mcu_position(print_time)
         return self.stepper.mcu_to_commanded_position(mcu_pos)
@@ -58,6 +60,7 @@ class ExtruderStepper:
         toolhead.flush_step_generation()
         if not extruder_name:
             self.stepper.set_trapq(None)
+            self.motion_queue = None
             return
         extruder = self.printer.lookup_object(extruder_name, None)
         if extruder is None or not isinstance(extruder, PrinterExtruder):
@@ -65,6 +68,7 @@ class ExtruderStepper:
                                              % (extruder_name,))
         self.stepper.set_position([extruder.last_position, 0., 0.])
         self.stepper.set_trapq(extruder.get_trapq())
+        self.motion_queue = extruder_name
     def _set_pressure_advance(self, pressure_advance, smooth_time):
         old_smooth_time = self.pressure_advance_smooth_time
         if not self.pressure_advance:
@@ -127,7 +131,8 @@ class ExtruderStepper:
     def cmd_SYNC_EXTRUDER_MOTION(self, gcmd):
         ename = gcmd.get('MOTION_QUEUE')
         self.sync_to_extruder(ename)
-        gcmd.respond_info("Extruder stepper now syncing with '%s'" % (ename,))
+        gcmd.respond_info("Extruder '%s' now syncing with '%s'"
+                          % (self.name, ename))
     cmd_SET_E_STEP_DISTANCE_help = "Set extruder step distance"
     def cmd_SET_E_STEP_DISTANCE(self, gcmd):
         step_dist = gcmd.get_float('DISTANCE', None, above=0.)
@@ -144,7 +149,8 @@ class ExtruderStepper:
     def cmd_SYNC_STEPPER_TO_EXTRUDER(self, gcmd):
         ename = gcmd.get('EXTRUDER')
         self.sync_to_extruder(ename)
-        gcmd.respond_info("Extruder stepper now syncing with '%s'" % (ename,))
+        gcmd.respond_info("Extruder '%s' now syncing with '%s'"
+                          % (self.name, ename))
 
 # Tracking for hotend heater, extrusion motion queue, and extruder stepper
 class PrinterExtruder:
@@ -222,23 +228,23 @@ class PrinterExtruder:
     def stats(self, eventtime):
         return self.heater.stats(eventtime)
     def check_move(self, move):
-        axis_r = move.axes_r[5]
+        axis_r = move.axes_r[3]
         if not self.heater.can_extrude:
             raise self.printer.command_error(
                 "Extrude below minimum temp\n"
                 "See the 'min_extrude_temp' config option for details")
         if (not move.axes_d[0] and not move.axes_d[1]) or axis_r < 0.:
             # Extrude only move (or retraction move) - limit accel and velocity
-            if abs(move.axes_d[5]) > self.max_e_dist:
+            if abs(move.axes_d[3]) > self.max_e_dist:
                 raise self.printer.command_error(
                     "Extrude only move too long (%.3fmm vs %.3fmm)\n"
                     "See the 'max_extrude_only_distance' config"
-                    " option for details" % (move.axes_d[5], self.max_e_dist))
+                    " option for details" % (move.axes_d[3], self.max_e_dist))
             inv_extrude_r = 1. / abs(axis_r)
             move.limit_speed(self.max_e_velocity * inv_extrude_r,
                              self.max_e_accel * inv_extrude_r)
         elif axis_r > self.max_extrude_ratio:
-            if move.axes_d[5] <= self.nozzle_diameter * self.max_extrude_ratio:
+            if move.axes_d[3] <= self.nozzle_diameter * self.max_extrude_ratio:
                 # Permit extrusion if amount extruded is tiny
                 return
             area = axis_r * self.filament_area
@@ -249,14 +255,14 @@ class PrinterExtruder:
                 "See the 'max_extrude_cross_section' config option for details"
                 % (area, self.max_extrude_ratio * self.filament_area))
     def calc_junction(self, prev_move, move):
-        diff_r = move.axes_r[5] - prev_move.axes_r[5]
+        diff_r = move.axes_r[3] - prev_move.axes_r[3]
         if diff_r:
             return (self.instant_corner_v / abs(diff_r))**2
         return move.max_cruise_v2
     def move(self, print_time, move):
-        axis_r = move.axes_r[5]
+        axis_r = move.axes_r[3]
         accel = move.accel * axis_r
-        start_vv = move.start_vv * axis_r
+        start_v = move.start_v * axis_r
         cruise_v = move.cruise_v * axis_r
         can_pressure_advance = False
         if axis_r > 0. and (move.axes_d[0] or move.axes_d[1]):
@@ -264,10 +270,10 @@ class PrinterExtruder:
         # Queue movement (x is extruder movement, y is pressure advance flag)
         self.trapq_append(self.trapq, print_time,
                           move.accel_t, move.cruise_t, move.decel_t,
-                          move.start_pos[5], 0., 0., 0., 0.,
-                          1., can_pressure_advance, 0., 0., 0.,
-                          start_vv, cruise_v, accel)
-        self.last_position = move.end_pos[5]
+                          move.start_pos[3], 0., 0.,
+                          1., can_pressure_advance, 0.,
+                          start_v, cruise_v, accel)
+        self.last_position = move.end_pos[3]
     def find_past_position(self, print_time):
         if self.extruder_stepper is None:
             return 0.

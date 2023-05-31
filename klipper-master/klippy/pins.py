@@ -3,7 +3,7 @@
 # Copyright (C) 2016-2021  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import re
+import re, logging
 
 class error(Exception):
     pass
@@ -17,6 +17,7 @@ re_pin = re.compile(r'(?P<prefix>[ _]pin=)(?P<name>[^ ]*)')
 
 class PinResolver:
     def __init__(self, validate_aliases=True):
+	logging.info("[log]pins.py/PinResolver")
         self.validate_aliases = validate_aliases
         self.reserved = {}
         self.aliases = {}
@@ -60,6 +61,7 @@ class PinResolver:
 class PrinterPins:
     error = error
     def __init__(self):
+	logging.info("[log]pins.py/PrinterPins")
         self.chips = {}
         self.active_pins = {}
         self.pin_resolvers = {}

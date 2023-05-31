@@ -239,7 +239,7 @@ class PrinterMotionReport:
         self.next_status_time = 0.
         gcode = self.printer.lookup_object('gcode')
         self.last_status = {
-            'live_position': gcode.Coord(0., 0., 0., 0., 0., 0., 0.),
+            'live_position': gcode.Coord(0., 0., 0., 0.),
             'live_velocity': 0., 'live_extruder_velocity': 0.,
             'steppers': [], 'trapq': [],
         }
@@ -304,16 +304,16 @@ class PrinterMotionReport:
         if eventtime < self.next_status_time or not self.trapqs:
             return self.last_status
         self.next_status_time = eventtime + STATUS_REFRESH_TIME
-        xyzuvpos = (0., 0., 0., 0., 0.)
-        epos = (0.,0.)
-        xyzuvvelocity = evelocity = 0.
+        xyzpos = (0., 0., 0.)
+        epos = (0.,)
+        xyzvelocity = evelocity = 0.
         # Calculate current requested toolhead position
         mcu = self.printer.lookup_object('mcu')
         print_time = mcu.estimated_print_time(eventtime)
         pos, velocity = self.trapqs['toolhead'].get_trapq_position(print_time)
         if pos is not None:
-            xyzuvpos = pos[:5]
-            xyzuvvelocity = velocity
+            xyzpos = pos[:3]
+            xyzvelocity = velocity
         # Calculate requested position of currently active extruder
         toolhead = self.printer.lookup_object('toolhead')
         ehandler = self.trapqs.get(toolhead.get_extruder().get_name())
@@ -324,8 +324,8 @@ class PrinterMotionReport:
                 evelocity = velocity
         # Report status
         self.last_status = dict(self.last_status)
-        self.last_status['live_position'] = toolhead.Coord(*(xyzuvpos + epos))
-        self.last_status['live_velocity'] = xyzuvvelocity
+        self.last_status['live_position'] = toolhead.Coord(*(xyzpos + epos))
+        self.last_status['live_velocity'] = xyzvelocity
         self.last_status['live_extruder_velocity'] = evelocity
         return self.last_status
 

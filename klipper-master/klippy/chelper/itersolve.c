@@ -139,8 +139,7 @@ check_active(struct stepper_kinematics *sk, struct move *m)
     int af = sk->active_flags;
     return ((af & AF_X && m->axes_r.x != 0.)
             || (af & AF_Y && m->axes_r.y != 0.)
-            || (af & AF_Z && m->axes_r.z != 0.)|| (af & AF_U && m->axes_r.u != 0.)
-            || (af & AF_V && m->axes_r.v != 0.));
+            || (af & AF_Z && m->axes_r.z != 0.));
 }
 
 // Generate step times for a range of moves on the trapq
@@ -256,25 +255,22 @@ itersolve_set_stepcompress(struct stepper_kinematics *sk
 
 double __visible
 itersolve_calc_position_from_coord(struct stepper_kinematics *sk
-                                   , double x, double y, double z, double u, double v)
+                                   , double x, double y, double z)
 {
     struct move m;
     memset(&m, 0, sizeof(m));
     m.start_pos.x = x;
     m.start_pos.y = y;
     m.start_pos.z = z;
-    m.start_pos.u = u;
-    m.start_pos.v = v;
-
     m.move_t = 1000.;
     return sk->calc_position_cb(sk, &m, 500.);
 }
 
 void __visible
 itersolve_set_position(struct stepper_kinematics *sk
-                       , double x, double y, double z, double u, double v)
+                       , double x, double y, double z)
 {
-    sk->commanded_pos = itersolve_calc_position_from_coord(sk, x, y, z, u, v);
+    sk->commanded_pos = itersolve_calc_position_from_coord(sk, x, y, z);
 }
 
 double __visible

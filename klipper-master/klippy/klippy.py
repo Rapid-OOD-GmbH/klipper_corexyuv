@@ -51,6 +51,7 @@ class Printer:
     config_error = configfile.error
     command_error = gcode.CommandError
     def __init__(self, main_reactor, bglogger, start_args):
+	logging.info("[log]klippy.py/Printer")
         self.bglogger = bglogger
         self.start_args = start_args
         self.reactor = main_reactor
