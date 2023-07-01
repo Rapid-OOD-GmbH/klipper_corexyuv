@@ -8,6 +8,7 @@ import stepper
 
 class CoreXYUVKinematics:
     def __init__(self, toolhead, config):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/__init__")
         # Setup axis rails
         self.rails = [stepper.LookupMultiRail(config.getsection('stepper_' + n))
                       for n in 'xyzuv']
@@ -41,20 +42,29 @@ class CoreXYUVKinematics:
         ranges = [r.get_range() for r in self.rails]
         self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0., w=0.)
         self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0., w=0.)
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/__init__")
     def get_steppers(self):
+	logging.info("[log](+/-)kinematics/corexy.py/CoreXYUVKinematics/get_steppers")
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/calc_position")
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/calc_position")
         return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0.5 * (pos[3] + pos[4]), 0.5 * (pos[3] - pos[4])]
     def set_position(self, newpos, homing_axes):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/set_position")
         for i, rail in enumerate(self.rails):
             rail.set_position(newpos)
             if i in homing_axes:
                 self.limits[i] = rail.get_range()
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/set_position")
     def note_z_not_homed(self):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/note_z_not_homed")
         # Helper for Safe Z Home
         self.limits[2] = (1.0, -1.0)
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/note_z_not_homed")
     def home(self, homing_state):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/home")
         # Each axis is homed independently and in order
         for axis in homing_state.get_axes():
             rail = self.rails[axis]
@@ -70,9 +80,13 @@ class CoreXYUVKinematics:
                 forcepos[axis] += 1.5 * (position_max - hi.position_endstop)
             # Perform homing
             homing_state.home_rails([rail], forcepos, homepos)
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/home")
     def _motor_off(self, print_time):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/_motor_off")
         self.limits = [(1.0, -1.0)] * 3
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/_motor_off")
     def _check_endstops(self, move):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/_check_endstops")
         end_pos = move.end_pos
         for i in (0, 1, 2, 3, 4):
             if (move.axes_d[i]
@@ -81,7 +95,9 @@ class CoreXYUVKinematics:
                 if self.limits[i][0] > self.limits[i][1]:
                     raise move.move_error("Must home axis first")
                 raise move.move_error()
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/_check_endstops")
     def check_move(self, move):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/check_move")
         limits = self.limits
         xpos, ypos = move.end_pos[:2]
         upos, vpos = move.end_pos[3:5]
@@ -95,14 +111,18 @@ class CoreXYUVKinematics:
 
         if not move.axes_d[2]:
             # Normal XY move - use defaults
+	    logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/check_move")
             return
         # Move with Z - update velocity and accel for slower Z axis
         self._check_endstops(move)
         z_ratio = move.move_d / abs(move.axes_d[2])
         move.limit_speed(
             self.max_z_velocity * z_ratio, self.max_z_accel * z_ratio)
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/check_move")
     def get_status(self, eventtime):
+	logging.info("[log](+)kinematics/corexy.py/CoreXYUVKinematics/get_status")
         axes = [a for a, (l, h) in zip("xyzuv", self.limits) if l <= h]
+	logging.info("[log](-)kinematics/corexy.py/CoreXYUVKinematics/get_status")
         return {
             'homed_axes': "".join(axes),
             'axis_minimum': self.axes_min,
@@ -110,4 +130,5 @@ class CoreXYUVKinematics:
         }
 
 def load_kinematics(toolhead, config):
+    logging.info("[log](+/-)kinematics/corexy.py/CoreXYUVKinematics/load_kinematics")
     return CoreXYUVKinematics(toolhead, config)

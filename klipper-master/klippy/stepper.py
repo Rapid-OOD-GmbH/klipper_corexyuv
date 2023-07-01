@@ -21,7 +21,7 @@ class MCU_stepper:
     def __init__(self, name, step_pin_params, dir_pin_params,
                  rotation_dist, steps_per_rotation,
                  step_pulse_duration=None, units_in_radians=False):
-	logging.info("[log]stepper.py/MCU_stepper")
+	logging.info("[log](+)stepper.py/MCU_stepper/__init__")
         self._name = name
         self._rotation_dist = rotation_dist
         self._steps_per_rotation = steps_per_rotation
@@ -53,26 +53,37 @@ class MCU_stepper:
         self._trapq = ffi_main.NULL
         self._mcu.get_printer().register_event_handler('klippy:connect',
                                                        self._query_mcu_position)
+	logging.info("[log](-)stepper.py/MCU_stepper/__init__")
     def get_mcu(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_mcu")
         return self._mcu
     def get_name(self, short=False):
+	logging.info("[log](+)stepper.py/MCU_stepper/get_name")
         if short and self._name.startswith('stepper_'):
             return self._name[8:]
+	logging.info("[log](-)stepper.py/MCU_stepper/get_name")
         return self._name
     def units_in_radians(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/units_in_radians")
         # Returns true if distances are in radians instead of millimeters
         return self._units_in_radians
     def get_pulse_duration(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_pulse_duration")
         return self._step_pulse_duration, self._step_both_edge
     def setup_default_pulse_duration(self, pulse_duration, step_both_edge):
+	logging.info("[log](+)stepper.py/MCU_stepper/setup_default_pulse_duration")
         if self._step_pulse_duration is None:
             self._step_pulse_duration = pulse_duration
         self._req_step_both_edge = step_both_edge
+	logging.info("[log](-)stepper.py/MCU_stepper/setup_default_pulse_duration")
     def setup_itersolve(self, alloc_func, *params):
+	logging.info("[log](+)stepper.py/MCU_stepper/setup_itersolve")
         ffi_main, ffi_lib = chelper.get_ffi()
         sk = ffi_main.gc(getattr(ffi_lib, alloc_func)(*params), ffi_lib.free)
         self.set_stepper_kinematics(sk)
+	logging.info("[log](-)stepper.py/MCU_stepper/setup_itersolve")
     def _build_config(self):
+	logging.info("[log](+)stepper.py/MCU_stepper/_build_config")
         if self._step_pulse_duration is None:
             self._step_pulse_duration = .000002
         invert_step = self._invert_step
@@ -104,64 +115,91 @@ class MCU_stepper:
         ffi_main, ffi_lib = chelper.get_ffi()
         ffi_lib.stepcompress_fill(self._stepqueue, max_error_ticks,
                                   step_cmd_tag, dir_cmd_tag)
+	logging.info("[log](-)stepper.py/MCU_stepper/_build_config")
     def get_oid(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_oid")
         return self._oid
     def get_step_dist(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_step_dist")
         return self._step_dist
     def get_rotation_distance(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_rotation_distance")
         return self._rotation_dist, self._steps_per_rotation
     def set_rotation_distance(self, rotation_dist):
+	logging.info("[log](+)stepper.py/MCU_stepper/set_rotation_distance")
         mcu_pos = self.get_mcu_position()
         self._rotation_dist = rotation_dist
         self._step_dist = rotation_dist / self._steps_per_rotation
         self.set_stepper_kinematics(self._stepper_kinematics)
         self._set_mcu_position(mcu_pos)
+	logging.info("[log](-)stepper.py/MCU_stepper/set_rotation_distance")
     def get_dir_inverted(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_dir_inverted")
         return self._invert_dir, self._orig_invert_dir
     def set_dir_inverted(self, invert_dir):
+	logging.info("[log](+)stepper.py/MCU_stepper/set_dir_inverted")
         invert_dir = not not invert_dir
         if invert_dir == self._invert_dir:
+	    logging.info("[log](-)stepper.py/MCU_stepper/set_dir_inverted")
             return
         self._invert_dir = invert_dir
         ffi_main, ffi_lib = chelper.get_ffi()
         ffi_lib.stepcompress_set_invert_sdir(self._stepqueue, invert_dir)
         self._mcu.get_printer().send_event("stepper:set_dir_inverted", self)
+	logging.info("[log](-)stepper.py/MCU_stepper/set_dir_inverted")
     def calc_position_from_coord(self, coord):
+	logging.info("[log](+)stepper.py/MCU_stepper/calc_position_from_coord")
         ffi_main, ffi_lib = chelper.get_ffi()
         return ffi_lib.itersolve_calc_position_from_coord(
             self._stepper_kinematics, coord[0], coord[1], coord[2])
+	logging.info("[log](-)stepper.py/MCU_stepper/calc_position_from_coord")
     def set_position(self, coord):
+	logging.info("[log](+)stepper.py/MCU_stepper/set_position")
         mcu_pos = self.get_mcu_position()
         sk = self._stepper_kinematics
         ffi_main, ffi_lib = chelper.get_ffi()
         ffi_lib.itersolve_set_position(sk, coord[0], coord[1], coord[2])
         self._set_mcu_position(mcu_pos)
+	logging.info("[log](-)stepper.py/MCU_stepper/set_position")
     def get_commanded_position(self):
+	logging.info("[log](+)stepper.py/MCU_stepper/get_commanded_position")
         ffi_main, ffi_lib = chelper.get_ffi()
+	logging.info("[log](-)stepper.py/MCU_stepper/get_commanded_position")
         return ffi_lib.itersolve_get_commanded_pos(self._stepper_kinematics)
     def get_mcu_position(self):
+	logging.info("[log](+)stepper.py/MCU_stepper/get_mcu_position")
         mcu_pos_dist = self.get_commanded_position() + self._mcu_position_offset
         mcu_pos = mcu_pos_dist / self._step_dist
         if mcu_pos >= 0.:
+	    logging.info("[log](-)stepper.py/MCU_stepper/get_mcu_position")
             return int(mcu_pos + 0.5)
+	logging.info("[log](-)stepper.py/MCU_stepper/get_mcu_position")
         return int(mcu_pos - 0.5)
     def _set_mcu_position(self, mcu_pos):
+	logging.info("[log](+)stepper.py/MCU_stepper/_set_mcu_position")
         mcu_pos_dist = mcu_pos * self._step_dist
         self._mcu_position_offset = mcu_pos_dist - self.get_commanded_position()
+	logging.info("[log](-)stepper.py/MCU_stepper/_set_mcu_position")
     def get_past_mcu_position(self, print_time):
+	logging.info("[log](+)stepper.py/MCU_stepper/get_past_mcu_position")
         clock = self._mcu.print_time_to_clock(print_time)
         ffi_main, ffi_lib = chelper.get_ffi()
         pos = ffi_lib.stepcompress_find_past_position(self._stepqueue, clock)
+	logging.info("[log](-)stepper.py/MCU_stepper/get_past_mcu_position")
         return int(pos)
     def mcu_to_commanded_position(self, mcu_pos):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/mcu_to_commanded_position")
         return mcu_pos * self._step_dist - self._mcu_position_offset
     def dump_steps(self, count, start_clock, end_clock):
+	logging.info("[log](+)stepper.py/MCU_stepper/dump_steps")
         ffi_main, ffi_lib = chelper.get_ffi()
         data = ffi_main.new('struct pull_history_steps[]', count)
         count = ffi_lib.stepcompress_extract_old(self._stepqueue, data, count,
                                                  start_clock, end_clock)
+	logging.info("[log](-)stepper.py/MCU_stepper/dump_steps")
         return (data, count)
     def set_stepper_kinematics(self, sk):
+	logging.info("[log](+)stepper.py/MCU_stepper/set_stepper_kinematics")
         old_sk = self._stepper_kinematics
         mcu_pos = 0
         if old_sk is not None:
@@ -171,8 +209,10 @@ class MCU_stepper:
         ffi_lib.itersolve_set_stepcompress(sk, self._stepqueue, self._step_dist)
         self.set_trapq(self._trapq)
         self._set_mcu_position(mcu_pos)
+	logging.info("[log](-)stepper.py/MCU_stepper/set_stepper_kinematics")
         return old_sk
     def note_homing_end(self):
+	logging.info("[log](+)stepper.py/MCU_stepper/note_homing_end")
         ffi_main, ffi_lib = chelper.get_ffi()
         ret = ffi_lib.stepcompress_reset(self._stepqueue, 0)
         if ret:
@@ -182,8 +222,11 @@ class MCU_stepper:
         if ret:
             raise error("Internal error in stepcompress")
         self._query_mcu_position()
+	logging.info("[log](-)stepper.py/MCU_stepper/note_homing_end")
     def _query_mcu_position(self):
+	logging.info("[log](+)stepper.py/MCU_stepper/_query_mcu_position")
         if self._mcu.is_fileoutput():
+	    logging.info("[log](-)stepper.py/MCU_stepper/_query_mcu_position")
             return
         params = self._get_position_cmd.send([self._oid])
         last_pos = params['pos']
@@ -198,19 +241,26 @@ class MCU_stepper:
             raise error("Internal error in stepcompress")
         self._set_mcu_position(last_pos)
         self._mcu.get_printer().send_event("stepper:sync_mcu_position", self)
+	logging.info("[log](-)stepper.py/MCU_stepper/_query_mcu_position")
     def get_trapq(self):
+	logging.info("[log](+/-)stepper.py/MCU_stepper/get_trapq")
         return self._trapq
     def set_trapq(self, tq):
+	logging.info("[log](+)stepper.py/MCU_stepper/set_trapq")
         ffi_main, ffi_lib = chelper.get_ffi()
         if tq is None:
             tq = ffi_main.NULL
         ffi_lib.itersolve_set_trapq(self._stepper_kinematics, tq)
         old_tq = self._trapq
         self._trapq = tq
+	logging.info("[log](-)stepper.py/MCU_stepper/set_trapq")
         return old_tq
     def add_active_callback(self, cb):
+	logging.info("[log](+)stepper.py/MCU_stepper/add_active_callback")
         self._active_callbacks.append(cb)
+	logging.info("[log](-)stepper.py/MCU_stepper/add_active_callback")
     def generate_steps(self, flush_time):
+	logging.info("[log](+)stepper.py/MCU_stepper/generate_steps")
         # Check for activity if necessary
         if self._active_callbacks:
             sk = self._stepper_kinematics
@@ -225,13 +275,17 @@ class MCU_stepper:
         ret = self._itersolve_generate_steps(sk, flush_time)
         if ret:
             raise error("Internal error in stepcompress")
+	logging.info("[log](-)stepper.py/MCU_stepper/generate_steps")
     def is_active_axis(self, axis):
+	logging.info("[log](+)stepper.py/MCU_stepper/is_active_axis")
         ffi_main, ffi_lib = chelper.get_ffi()
         a = axis.encode()
+	logging.info("[log](-)stepper.py/MCU_stepper/is_active_axis")
         return ffi_lib.itersolve_is_active_axis(self._stepper_kinematics, a)
 
 # Helper code to build a stepper object from a config section
 def PrinterStepper(config, units_in_radians=False):
+    logging.info("[log](+)stepper.py/PrinterStepper")
     printer = config.get_printer()
     name = config.get_name()
     # Stepper definition
@@ -251,19 +305,23 @@ def PrinterStepper(config, units_in_radians=False):
     for mname in ['stepper_enable', 'force_move', 'motion_report']:
         m = printer.load_object(config, mname)
         m.register_stepper(config, mcu_stepper)
+    logging.info("[log](-)stepper.py/PrinterStepper")
     return mcu_stepper
 
 # Parse stepper gear_ratio config parameter
 def parse_gear_ratio(config, note_valid):
+    logging.info("[log](+)stepper.py/parse_gear_ratio")
     gear_ratio = config.getlists('gear_ratio', (), seps=(':', ','), count=2,
                                  parser=float, note_valid=note_valid)
     result = 1.
     for g1, g2 in gear_ratio:
         result *= g1 / g2
+    logging.info("[log](-)stepper.py/parse_gear_ratio")
     return result
 
 # Obtain "step distance" information from a config section
 def parse_step_distance(config, units_in_radians=None, note_valid=False):
+    logging.info("[log](+)stepper.py/parse_step_distance")
     if units_in_radians is None:
         # Caller doesn't know if units are in radians - infer it
         rd = config.get('rotation_distance', None, note_valid=False)
@@ -283,6 +341,7 @@ def parse_step_distance(config, units_in_radians=None, note_valid=False):
         raise config.error("full_steps_per_rotation invalid in section '%s'"
                            % (config.get_name(),))
     gearing = parse_gear_ratio(config, note_valid)
+    logging.info("[log](-)stepper.py/parse_step_distance")
     return rotation_dist, full_steps * microsteps * gearing
 
 
@@ -295,7 +354,7 @@ def parse_step_distance(config, units_in_radians=None, note_valid=False):
 class PrinterRail:
     def __init__(self, config, need_position_minmax=True,
                  default_position_endstop=None, units_in_radians=False):
-	logging.info("[log]stepper.py/PrinterRail")
+	logging.info("[log](+)stepper.py/PrinterRail/__init__")
         # Primary stepper and endstop
         self.stepper_units_in_radians = units_in_radians
         self.steppers = []
@@ -356,26 +415,34 @@ class PrinterRail:
             raise config.error(
                 "Invalid homing_positive_dir / position_endstop in '%s'"
                 % (config.get_name(),))
+	logging.info("[log](-)stepper.py/PrinterRail/__init__")
     def get_range(self):
+	logging.info("[log](+/-)stepper.py/PrinterRail/get_range")
         return self.position_min, self.position_max
     def get_homing_info(self):
+	logging.info("[log](+)stepper.py/PrinterRail/get_homing_info")
         homing_info = collections.namedtuple('homing_info', [
             'speed', 'position_endstop', 'retract_speed', 'retract_dist',
             'positive_dir', 'second_homing_speed'])(
                 self.homing_speed, self.position_endstop,
                 self.homing_retract_speed, self.homing_retract_dist,
                 self.homing_positive_dir, self.second_homing_speed)
+	logging.info("[log](-)stepper.py/PrinterRail/get_homing_info")
         return homing_info
     def get_steppers(self):
+	logging.info("[log](+/-)stepper.py/PrinterRail/get_steppers")
         return list(self.steppers)
     def get_endstops(self):
+	logging.info("[log](+)stepper.py/PrinterRail/get_endstops")
         return list(self.endstops)
     def add_extra_stepper(self, config):
+	logging.info("[log](+)stepper.py/PrinterRail/add_extra_stepper")
         stepper = PrinterStepper(config, self.stepper_units_in_radians)
         self.steppers.append(stepper)
         if self.endstops and config.get('endstop_pin', None) is None:
             # No endstop defined - use primary endstop
             self.endstops[0][0].add_stepper(stepper)
+	    logging.info("[log](-)stepper.py/PrinterRail/add_extra_stepper")
             return
         endstop_pin = config.get('endstop_pin')
         printer = config.get_printer()
@@ -404,26 +471,37 @@ class PrinterRail:
                             "must specify the same pullup/invert settings" % (
                                 self.get_name(), pin_name))
         mcu_endstop.add_stepper(stepper)
+	logging.info("[log](-)stepper.py/PrinterRail/add_extra_stepper")
     def setup_itersolve(self, alloc_func, *params):
+	logging.info("[log](+)stepper.py/PrinterRail/setup_itersolve")
         for stepper in self.steppers:
             stepper.setup_itersolve(alloc_func, *params)
+	logging.info("[log](-)stepper.py/PrinterRail/setup_itersolve")
     def generate_steps(self, flush_time):
+	logging.info("[log](+)stepper.py/PrinterRail/generate_steps")
         for stepper in self.steppers:
             stepper.generate_steps(flush_time)
+	logging.info("[log](-)stepper.py/PrinterRail/generate_steps")
     def set_trapq(self, trapq):
+	logging.info("[log](+)stepper.py/PrinterRail/set_trapq")
         for stepper in self.steppers:
             stepper.set_trapq(trapq)
+	logging.info("[log](-)stepper.py/PrinterRail/set_trapq")
     def set_position(self, coord):
+	logging.info("[log](+)stepper.py/PrinterRail/set_position")
         for stepper in self.steppers:
             stepper.set_position(coord)
+	logging.info("[log](-)stepper.py/PrinterRail/set_position")
 
 # Wrapper for dual stepper motor support
 def LookupMultiRail(config, need_position_minmax=True,
                  default_position_endstop=None, units_in_radians=False):
+    logging.info("[log](+)stepper.py/LookupMultiRail")
     rail = PrinterRail(config, need_position_minmax,
                        default_position_endstop, units_in_radians)
     for i in range(1, 99):
         if not config.has_section(config.get_name() + str(i)):
             break
         rail.add_extra_stepper(config.getsection(config.get_name() + str(i)))
+    logging.info("[log](-)stepper.py/LookupMultiRail")
     return rail

@@ -51,7 +51,7 @@ class Printer:
     config_error = configfile.error
     command_error = gcode.CommandError
     def __init__(self, main_reactor, bglogger, start_args):
-	logging.info("[log]klippy.py/Printer")
+	logging.info("[log](+)klippy.py/Printer/__main__")
         self.bglogger = bglogger
         self.start_args = start_args
         self.reactor = main_reactor
@@ -64,11 +64,15 @@ class Printer:
         # Init printer components that must be setup prior to config
         for m in [gcode, webhooks]:
             m.add_early_printer_objects(self)
+	logging.info("[log](-)klippy.py/Printer/__main__")
     def get_start_args(self):
+	logging.info("[log](+/-)klippy.py/Printer/get_start_args")
         return self.start_args
     def get_reactor(self):
+	logging.info("[log](+/-)klippy.py/Printer/get_reactor")
         return self.reactor
     def get_state_message(self):
+	logging.info("[log](+)klippy.py/Printer/get_state_message")
         if self.state_message == message_ready:
             category = "ready"
         elif self.state_message == message_startup:
@@ -77,27 +81,37 @@ class Printer:
             category = "shutdown"
         else:
             category = "error"
+	logging.info("[log](-)klippy.py/Printer/get_state_message")
         return self.state_message, category
     def is_shutdown(self):
+	logging.info("[log](+/-)klippy.py/Printer/is_shutdown")
         return self.in_shutdown_state
     def _set_state(self, msg):
+	logging.info("[log](+)klippy.py/Printer/_set_state")
         if self.state_message in (message_ready, message_startup):
             self.state_message = msg
         if (msg != message_ready
             and self.start_args.get('debuginput') is not None):
             self.request_exit('error_exit')
+	logging.info("[log](-)klippy.py/Printer/_set_state")
     def add_object(self, name, obj):
+	logging.info("[log](+)klippy.py/Printer/add_object")
         if name in self.objects:
             raise self.config_error(
                 "Printer object '%s' already created" % (name,))
         self.objects[name] = obj
+	logging.info("[log](-)klippy.py/Printer/add_object")
     def lookup_object(self, name, default=configfile.sentinel):
+	logging.info("[log](+)klippy.py/Printer/lookup_object")
         if name in self.objects:
+	    logging.info("[log](-)klippy.py/Printer/lookup_object")
             return self.objects[name]
         if default is configfile.sentinel:
             raise self.config_error("Unknown config object '%s'" % (name,))
+	logging.info("[log](-)klippy.py/Printer/lookup_object")
         return default
     def lookup_objects(self, module=None):
+	logging.info("[log](+)klippy.py/Printer/lookup_objects")
         if module is None:
             return list(self.objects.items())
         prefix = module + ' '
@@ -105,8 +119,10 @@ class Printer:
                 for n in self.objects if n.startswith(prefix)]
         if module in self.objects:
             return [(module, self.objects[module])] + objs
+	logging.info("[log](-)klippy.py/Printer/lookup_objects")
         return objs
     def load_object(self, config, section, default=configfile.sentinel):
+	logging.info("[log](+)klippy.py/Printer/load_object")
         if section in self.objects:
             return self.objects[section]
         module_parts = section.split()
@@ -126,11 +142,14 @@ class Printer:
         init_func = getattr(mod, init_func, None)
         if init_func is None:
             if default is not configfile.sentinel:
+		logging.info("[log](-)klippy.py/Printer/load_object")
                 return default
             raise self.config_error("Unable to load module '%s'" % (section,))
         self.objects[section] = init_func(config.getsection(section))
+	logging.info("[log](-)klippy.py/Printer/load_object")
         return self.objects[section]
     def _read_config(self):
+	logging.info("[log](+)klippy.py/Printer/_read_config")
         self.objects['configfile'] = pconfig = configfile.PrinterConfig(self)
         config = pconfig.read_main_config()
         if self.bglogger is not None:
@@ -144,7 +163,9 @@ class Printer:
             m.add_printer_objects(config)
         # Validate that there are no undefined parameters in the config file
         pconfig.check_unused_options(config)
+	logging.info("[log](-)klippy.py/Printer/_read_config")
     def _build_protocol_error_message(self, e):
+	logging.info("[log](+)klippy.py/Printer/_build_protocol_error_message")
         host_version = self.start_args['software_version']
         msg_update = []
         msg_updated = []
@@ -170,45 +191,55 @@ class Printer:
                "MCU(s) which should be updated:"]
         msg += msg_update + ["Up-to-date MCU(s):"] + msg_updated
         msg += [message_protocol_error2, str(e)]
+	logging.info("[log](-)klippy.py/Printer/_build_protocol_error_message")
         return "\n".join(msg)
     def _connect(self, eventtime):
+	logging.info("[log](+)klippy.py/Printer/_connect")
         try:
             self._read_config()
             self.send_event("klippy:mcu_identify")
             for cb in self.event_handlers.get("klippy:connect", []):
                 if self.state_message is not message_startup:
+		    logging.info("[log](-)klippy.py/Printer/_connect")
                     return
                 cb()
         except (self.config_error, pins.error) as e:
             logging.exception("Config error")
             self._set_state("%s\n%s" % (str(e), message_restart))
+	    logging.info("[log](-)klippy.py/Printer/_connect")
             return
         except msgproto.error as e:
             logging.exception("Protocol error")
             self._set_state(self._build_protocol_error_message(e))
             util.dump_mcu_build()
+	    logging.info("[log](-)klippy.py/Printer/_connect")
             return
         except mcu.error as e:
             logging.exception("MCU error during connect")
             self._set_state("%s%s" % (str(e), message_mcu_connect_error))
             util.dump_mcu_build()
+	    logging.info("[log](-)klippy.py/Printer/_connect")
             return
         except Exception as e:
             logging.exception("Unhandled exception during connect")
             self._set_state("Internal error during connect: %s\n%s"
                             % (str(e), message_restart,))
+	    logging.info("[log](-)klippy.py/Printer/_connect")
             return
         try:
             self._set_state(message_ready)
             for cb in self.event_handlers.get("klippy:ready", []):
                 if self.state_message is not message_ready:
+		    logging.info("[log](-)klippy.py/Printer/_connect")
                     return
                 cb()
         except Exception as e:
             logging.exception("Unhandled exception during ready callback")
             self.invoke_shutdown("Internal error during ready callback: %s"
                                  % (str(e),))
+	logging.info("[log](-)klippy.py/Printer/_connect")
     def run(self):
+	logging.info("[log](+)klippy.py/Printer/run")
         systime = time.time()
         monotime = self.reactor.monotonic()
         logging.info("Start printer at %s (%.1f %.1f)",
@@ -236,14 +267,19 @@ class Printer:
             self.send_event("klippy:disconnect")
         except:
             logging.exception("Unhandled exception during post run")
+	logging.info("[log](-)klippy.py/Printer/run")
         return run_result
     def set_rollover_info(self, name, info, log=True):
+	logging.info("[log](+)klippy.py/Printer/set_rollover_info")
         if log:
             logging.info(info)
         if self.bglogger is not None:
             self.bglogger.set_rollover_info(name, info)
+	logging.info("[log](-)klippy.py/Printer/set_rollover_info")
     def invoke_shutdown(self, msg):
+	logging.info("[log](+)klippy.py/Printer/invoke_shutdown")
         if self.in_shutdown_state:
+	    logging.info("[log](-)klippy.py/Printer/invoke_shutdown")
             return
         logging.error("Transition to shutdown state: %s", msg)
         self.in_shutdown_state = True
@@ -255,17 +291,23 @@ class Printer:
                 logging.exception("Exception during shutdown handler")
         logging.info("Reactor garbage collection: %s",
                      self.reactor.get_gc_stats())
+	logging.info("[log](-)klippy.py/Printer/invoke_shutdown")
     def invoke_async_shutdown(self, msg):
+	logging.info("[log](+/-)klippy.py/Printer/invoke_async_shutdown")
         self.reactor.register_async_callback(
             (lambda e: self.invoke_shutdown(msg)))
     def register_event_handler(self, event, callback):
+	logging.info("[log](+/-)klippy.py/Printer/register_event_handler")
         self.event_handlers.setdefault(event, []).append(callback)
     def send_event(self, event, *params):
+	logging.info("[log](+/-)klippy.py/Printer/send_event")
         return [cb(*params) for cb in self.event_handlers.get(event, [])]
     def request_exit(self, result):
+	logging.info("[log](+)klippy.py/Printer/request_exit")
         if self.run_result is None:
             self.run_result = result
         self.reactor.end()
+	logging.info("[log](-)klippy.py/Printer/request_exit")
 
 
 ######################################################################
@@ -273,6 +315,7 @@ class Printer:
 ######################################################################
 
 def import_test():
+    logging.info("[log](+)klippy.py/import_test")
     # Import all optional modules (used as a build test)
     dname = os.path.dirname(__file__)
     for mname in ['extras', 'kinematics']:
@@ -285,9 +328,11 @@ def import_test():
                     continue
                 module_name = fname
             importlib.import_module(mname + '.' + module_name)
+    logging.info("[log](-)klippy.py/import_test")
     sys.exit(0)
 
 def arg_dictionary(option, opt_str, value, parser):
+    logging.info("[log](+)klippy.py/arg_dictionary")
     key, fname = "dictionary", value
     if '=' in value:
         mcu_name, fname = value.split('=', 1)
@@ -295,8 +340,10 @@ def arg_dictionary(option, opt_str, value, parser):
     if parser.values.dictionary is None:
         parser.values.dictionary = {}
     parser.values.dictionary[key] = fname
+    logging.info("[log](-)klippy.py/arg_dictionary")
 
 def main():
+    logging.info("[log](+)klippy.py/main")
     usage = "%prog [options] <config file>"
     opts = optparse.OptionParser(usage)
     opts.add_option("-i", "--debuginput", dest="debuginput",
@@ -380,6 +427,7 @@ def main():
 
     if res == 'error_exit':
         sys.exit(-1)
+    logging.info("[log](-)klippy.py/main")
 
 if __name__ == '__main__':
     main()

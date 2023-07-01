@@ -14,11 +14,13 @@ STALL_TIME = 0.100
 
 # Calculate a move's accel_t, cruise_t, and cruise_v
 def calc_move_time(dist, speed, accel):
+    logging.info("[log](+)extras/force_move.py/calc_move_time")
     axis_r = 1.
     if dist < 0.:
         axis_r = -1.
         dist = -dist
     if not accel or not dist:
+	logging.info("[log](-)extras/force_move.py/calc_move_time")
         return axis_r, 0., dist / speed, speed
     max_cruise_v2 = dist * accel
     if max_cruise_v2 < speed**2:
@@ -26,10 +28,12 @@ def calc_move_time(dist, speed, accel):
     accel_t = speed / accel
     accel_decel_d = accel_t * speed
     cruise_t = (dist - accel_decel_d) / speed
+    logging.info("[log](-)extras/force_move.py/calc_move_time")
     return axis_r, accel_t, cruise_t, speed
 
 class ForceMove:
     def __init__(self, config):
+	logging.info("[log](+)extras/force_move.py/ForceMove/__init__")
         self.printer = config.get_printer()
         self.steppers = {}
         # Setup iterative solver
@@ -49,13 +53,19 @@ class ForceMove:
             gcode.register_command('SET_KINEMATIC_POSITION',
                                    self.cmd_SET_KINEMATIC_POSITION,
                                    desc=self.cmd_SET_KINEMATIC_POSITION_help)
+	logging.info("[log](-)extras/force_move.py/ForceMove/__init__")
     def register_stepper(self, config, mcu_stepper):
+	logging.info("[log](+)extras/force_move.py/ForceMove/register_stepper")
         self.steppers[mcu_stepper.get_name()] = mcu_stepper
+	logging.info("[log](-)extras/force_move.py/ForceMove/register_stepper")
     def lookup_stepper(self, name):
+	logging.info("[log](+)extras/force_move.py/ForceMove/lookup_stepper")
         if name not in self.steppers:
             raise self.printer.config_error("Unknown stepper %s" % (name,))
+	logging.info("[log](-)extras/force_move.py/ForceMove/lookup_stepper")
         return self.steppers[name]
     def _force_enable(self, stepper):
+	logging.info("[log](+)extras/force_move.py/ForceMove/_force_enable")
         toolhead = self.printer.lookup_object('toolhead')
         print_time = toolhead.get_last_move_time()
         stepper_enable = self.printer.lookup_object('stepper_enable')
@@ -64,8 +74,10 @@ class ForceMove:
         if not was_enable:
             enable.motor_enable(print_time)
             toolhead.dwell(STALL_TIME)
+	logging.info("[log](-)extras/force_move.py/ForceMove/_force_enable")
         return was_enable
     def _restore_enable(self, stepper, was_enable):
+	logging.info("[log](+)extras/force_move.py/ForceMove/_restore_enable")
         if not was_enable:
             toolhead = self.printer.lookup_object('toolhead')
             toolhead.dwell(STALL_TIME)
@@ -74,7 +86,9 @@ class ForceMove:
             enable = stepper_enable.lookup_enable(stepper.get_name())
             enable.motor_disable(print_time)
             toolhead.dwell(STALL_TIME)
+	logging.info("[log](-)extras/force_move.py/ForceMove/_restore_enable")
     def manual_move(self, stepper, dist, speed, accel=0.):
+	logging.info("[log](+)extras/force_move.py/ForceMove/manual_move")
         toolhead = self.printer.lookup_object('toolhead')
         toolhead.flush_step_generation()
         prev_sk = stepper.set_stepper_kinematics(self.stepper_kinematics)
@@ -91,13 +105,17 @@ class ForceMove:
         stepper.set_stepper_kinematics(prev_sk)
         toolhead.note_kinematic_activity(print_time)
         toolhead.dwell(accel_t + cruise_t + accel_t)
+	logging.info("[log](-)extras/force_move.py/ForceMove/manual_move")
     def _lookup_stepper(self, gcmd):
+	logging.info("[log](+)extras/force_move.py/ForceMove/_lookup_stepper")
         name = gcmd.get('STEPPER')
         if name not in self.steppers:
             raise gcmd.error("Unknown stepper %s" % (name,))
+	logging.info("[log](-)extras/force_move.py/ForceMove/_lookup_stepper")
         return self.steppers[name]
     cmd_STEPPER_BUZZ_help = "Oscillate a given stepper to help id it"
     def cmd_STEPPER_BUZZ(self, gcmd):
+	logging.info("[log](+)extras/force_move.py/ForceMove/cmd_STEPPER_BUZZ")
         stepper = self._lookup_stepper(gcmd)
         logging.info("Stepper buzz %s", stepper.get_name())
         was_enable = self._force_enable(stepper)
@@ -111,8 +129,10 @@ class ForceMove:
             self.manual_move(stepper, -dist, speed)
             toolhead.dwell(.450)
         self._restore_enable(stepper, was_enable)
+	logging.info("[log](-)extras/force_move.py/ForceMove/cmd_STEPPER_BUZZ")
     cmd_FORCE_MOVE_help = "Manually move a stepper; invalidates kinematics"
     def cmd_FORCE_MOVE(self, gcmd):
+	logging.info("[log](+)extras/force_move.py/ForceMove/cmd_FORCE_MOVE")
         stepper = self._lookup_stepper(gcmd)
         distance = gcmd.get_float('DISTANCE')
         speed = gcmd.get_float('VELOCITY', above=0.)
@@ -121,8 +141,10 @@ class ForceMove:
                      stepper.get_name(), distance, speed, accel)
         self._force_enable(stepper)
         self.manual_move(stepper, distance, speed, accel)
+	logging.info("[log](-)extras/force_move.py/ForceMove/cmd_FORCE_MOVE")
     cmd_SET_KINEMATIC_POSITION_help = "Force a low-level kinematic position"
     def cmd_SET_KINEMATIC_POSITION(self, gcmd):
+	logging.info("[log](+)extras/force_move.py/ForceMove/cmd_SET_KINEMATIC_POSITION")
         toolhead = self.printer.lookup_object('toolhead')
         toolhead.get_last_move_time()
         curpos = toolhead.get_position()
@@ -131,6 +153,8 @@ class ForceMove:
         z = gcmd.get_float('Z', curpos[2])
         logging.info("SET_KINEMATIC_POSITION pos=%.3f,%.3f,%.3f", x, y, z)
         toolhead.set_position([x, y, z, curpos[3]], homing_axes=(0, 1, 2))
+	logging.info("[log](-)extras/force_move.py/ForceMove/cmd_SET_KINEMATIC_POSITION")
 
 def load_config(config):
+    logging.info("[log](+/-)extras/force_move.py/load_config")
     return ForceMove(config)

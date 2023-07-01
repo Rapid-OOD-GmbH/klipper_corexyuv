@@ -12,6 +12,7 @@ API_UPDATE_INTERVAL = 0.500
 class APIDumpHelper:
     def __init__(self, printer, data_cb, startstop_cb=None,
                  update_interval=API_UPDATE_INTERVAL):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/__init__")
         self.printer = printer
         self.data_cb = data_cb
         if startstop_cb is None:
@@ -21,12 +22,15 @@ class APIDumpHelper:
         self.update_interval = update_interval
         self.update_timer = None
         self.clients = {}
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/__init__")
     def _stop(self):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/_stop")
         self.clients.clear()
         reactor = self.printer.get_reactor()
         reactor.unregister_timer(self.update_timer)
         self.update_timer = None
         if not self.is_started:
+	    logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_stop")
             return reactor.NEVER
         try:
             self.startstop_cb(False)
@@ -37,8 +41,10 @@ class APIDumpHelper:
         if self.clients:
             # New client started while in process of stopping
             self._start()
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_stop")
         return reactor.NEVER
     def _start(self):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/_start")
         if self.is_started:
             return
         self.is_started = True
@@ -53,55 +59,73 @@ class APIDumpHelper:
         systime = reactor.monotonic()
         waketime = systime + self.update_interval
         self.update_timer = reactor.register_timer(self._update, waketime)
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_start")
     def add_client(self, web_request):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/add_client")
         cconn = web_request.get_client_connection()
         template = web_request.get_dict('response_template', {})
         self.clients[cconn] = template
         self._start()
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/add_client")
     def add_internal_client(self):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/add_internal_client")
         cconn = InternalDumpClient()
         self.clients[cconn] = {}
         self._start()
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/add_internal_client")
         return cconn
     def _update(self, eventtime):
+	logging.info("[log](+)extras/motion_report.py/APIDumpHelper/_update")
         try:
             msg = self.data_cb(eventtime)
         except self.printer.command_error as e:
             logging.exception("API Dump Helper data callback error")
             return self._stop()
         if not msg:
+	    logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_update")
             return eventtime + self.update_interval
         for cconn, template in list(self.clients.items()):
             if cconn.is_closed():
                 del self.clients[cconn]
                 if not self.clients:
+		    logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_update")
                     return self._stop()
                 continue
             tmp = dict(template)
             tmp['params'] = msg
             cconn.send(tmp)
+	logging.info("[log](-)extras/motion_report.py/APIDumpHelper/_update")
         return eventtime + self.update_interval
 
 # An "internal webhooks" wrapper for using APIDumpHelper internally
 class InternalDumpClient:
     def __init__(self):
+	logging.info("[log](+)extras/motion_report.py/InternalDumpClient/__init__")
         self.msgs = []
         self.is_done = False
+	logging.info("[log](-)extras/motion_report.py/InternalDumpClient/__init__")
     def get_messages(self):
+	logging.info("[log](+/-)extras/motion_report.py/InternalDumpClient/get_messages")
         return self.msgs
     def finalize(self):
+	logging.info("[log](+)extras/motion_report.py/InternalDumpClient/finalize")
         self.is_done = True
+	logging.info("[log](-)extras/motion_report.py/InternalDumpClient/finalize")
     def is_closed(self):
+	logging.info("[log](+/-)extras/motion_report.py/InternalDumpClient/is_closed")
         return self.is_done
     def send(self, msg):
+	logging.info("[log](+)extras/motion_report.py/InternalDumpClient/send")
         self.msgs.append(msg)
         if len(self.msgs) >= 10000:
             # Avoid filling up memory with too many samples
             self.finalize()
+	logging.info("[log](-)extras/motion_report.py/InternalDumpClient/is_closed")
 
 # Extract stepper queue_step messages
 class DumpStepper:
     def __init__(self, printer, mcu_stepper):
+	logging.info("[log](+)extras/motion_report.py/DumpStepper/__init__")
         self.printer = printer
         self.mcu_stepper = mcu_stepper
         self.last_api_clock = 0
@@ -109,7 +133,9 @@ class DumpStepper:
         wh = self.printer.lookup_object('webhooks')
         wh.register_mux_endpoint("motion_report/dump_stepper", "name",
                                  mcu_stepper.get_name(), self._add_api_client)
+	logging.info("[log](-)extras/motion_report.py/DumpStepper/__init__")
     def get_step_queue(self, start_clock, end_clock):
+	logging.info("[log](+)extras/motion_report.py/DumpStepper/get_step_queue")
         mcu_stepper = self.mcu_stepper
         res = []
         while 1:
@@ -121,8 +147,10 @@ class DumpStepper:
                 break
             end_clock = data[count-1].first_clock
         res.reverse()
+	logging.info("[log](-)extras/motion_report.py/DumpStepper/get_step_queue")
         return ([d[i] for d, cnt in res for i in range(cnt-1, -1, -1)], res)
     def log_steps(self, data):
+	logging.info("[log](+)extras/motion_report.py/DumpStepper/log_steps")
         if not data:
             return
         out = []
@@ -134,9 +162,12 @@ class DumpStepper:
                        % (i, s.first_clock, s.start_position, s.interval,
                           s.step_count, s.add))
         logging.info('\n'.join(out))
+	logging.info("[log](-)extras/motion_report.py/DumpStepper/log_steps")
     def _api_update(self, eventtime):
+	logging.info("[log](+)extras/motion_report.py/DumpStepper/_api_update")
         data, cdata = self.get_step_queue(self.last_api_clock, 1<<63)
         if not data:
+	    logging.info("[log](-)extras/motion_report.py/DumpStepper/_api_update")
             return {}
         clock_to_print_time = self.mcu_stepper.get_mcu().clock_to_print_time
         first = data[0]
@@ -150,20 +181,24 @@ class DumpStepper:
         if self.mcu_stepper.get_dir_inverted()[0]:
             step_dist = -step_dist
         d = [(s.interval, s.step_count, s.add) for s in data]
+	logging.info("[log](-)extras/motion_report.py/DumpStepper/_api_update")
         return {"data": d, "start_position": start_position,
                 "start_mcu_position": mcu_pos, "step_distance": step_dist,
                 "first_clock": first_clock, "first_step_time": first_time,
                 "last_clock": last_clock, "last_step_time": last_time}
     def _add_api_client(self, web_request):
+	logging.info("[log](+)extras/motion_report.py/DumpStepper/_add_api_client")
         self.api_dump.add_client(web_request)
         hdr = ('interval', 'count', 'add')
         web_request.send({'header': hdr})
+	logging.info("[log](-)extras/motion_report.py/DumpStepper/_add_api_client")
 
 NEVER_TIME = 9999999999999999.
 
 # Extract trapezoidal motion queue (trapq)
 class DumpTrapQ:
     def __init__(self, printer, name, trapq):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/__init__")
         self.printer = printer
         self.name = name
         self.trapq = trapq
@@ -172,7 +207,9 @@ class DumpTrapQ:
         wh = self.printer.lookup_object('webhooks')
         wh.register_mux_endpoint("motion_report/dump_trapq", "name", name,
                                  self._add_api_client)
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/__init__")
     def extract_trapq(self, start_time, end_time):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/extract_trapq")
         ffi_main, ffi_lib = chelper.get_ffi()
         res = []
         while 1:
@@ -186,9 +223,12 @@ class DumpTrapQ:
                 break
             end_time = data[count-1].print_time
         res.reverse()
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/extract_trapq")
         return ([d[i] for d, cnt in res for i in range(cnt-1, -1, -1)], res)
     def log_trapq(self, data):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/log_trapq")
         if not data:
+	    logging.info("[log](-)extras/motion_report.py/DumpTrapQ/log_trapq")
             return
         out = ["Dumping trapq '%s' %d moves:" % (self.name, len(data))]
         for i, m in enumerate(data):
@@ -197,7 +237,9 @@ class DumpTrapQ:
                        % (i, m.print_time, m.move_t, m.start_v, m.accel,
                           m.start_x, m.start_y, m.start_z, m.x_r, m.y_r, m.z_r))
         logging.info('\n'.join(out))
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/log_trapq")
     def get_trapq_position(self, print_time):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/get_trapq_position")
         ffi_main, ffi_lib = chelper.get_ffi()
         data = ffi_main.new('struct pull_move[1]')
         count = ffi_lib.trapq_extract_old(self.trapq, data, 1, 0., print_time)
@@ -209,8 +251,10 @@ class DumpTrapQ:
         pos = (move.start_x + move.x_r * dist, move.start_y + move.y_r * dist,
                move.start_z + move.z_r * dist)
         velocity = move.start_v + move.accel * move_time
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/get_trapq_position")
         return pos, velocity
     def _api_update(self, eventtime):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/_api_update")
         qtime = self.last_api_msg[0] + min(self.last_api_msg[1], 0.100)
         data, cdata = self.extract_trapq(qtime, NEVER_TIME)
         d = [(m.print_time, m.move_t, m.start_v, m.accel,
@@ -219,19 +263,24 @@ class DumpTrapQ:
         if d and d[0] == self.last_api_msg:
             d.pop(0)
         if not d:
+	    logging.info("[log](-)extras/motion_report.py/DumpTrapQ/_api_update")
             return {}
         self.last_api_msg = d[-1]
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/_api_update")
         return {"data": d}
     def _add_api_client(self, web_request):
+	logging.info("[log](+)extras/motion_report.py/DumpTrapQ/_add_api_client")
         self.api_dump.add_client(web_request)
         hdr = ('time', 'duration', 'start_velocity', 'acceleration',
                'start_position', 'direction')
         web_request.send({'header': hdr})
+	logging.info("[log](-)extras/motion_report.py/DumpTrapQ/_add_api_client")
 
 STATUS_REFRESH_TIME = 0.250
 
 class PrinterMotionReport:
     def __init__(self, config):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/__init__")
         self.printer = config.get_printer()
         self.steppers = {}
         self.trapqs = {}
@@ -246,10 +295,14 @@ class PrinterMotionReport:
         # Register handlers
         self.printer.register_event_handler("klippy:connect", self._connect)
         self.printer.register_event_handler("klippy:shutdown", self._shutdown)
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/__init__")
     def register_stepper(self, config, mcu_stepper):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/register_stepper")
         ds = DumpStepper(self.printer, mcu_stepper)
         self.steppers[mcu_stepper.get_name()] = ds
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/register_stepper")
     def _connect(self):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/_connect")
         # Lookup toolhead trapq
         toolhead = self.printer.lookup_object("toolhead")
         trapq = toolhead.get_trapq()
@@ -267,8 +320,10 @@ class PrinterMotionReport:
         # Populate 'trapq' and 'steppers' in get_status result
         self.last_status['steppers'] = list(sorted(self.steppers.keys()))
         self.last_status['trapq'] = list(sorted(self.trapqs.keys()))
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/_connect")
     # Shutdown handling
     def _dump_shutdown(self, eventtime):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/_dump_shutdown")
         # Log stepper queue_steps on mcu that started shutdown (if any)
         shutdown_time = NEVER_TIME
         for dstepper in self.steppers.values():
@@ -283,6 +338,7 @@ class PrinterMotionReport:
             data, cdata = dstepper.get_step_queue(start_clock, end_clock)
             dstepper.log_steps(data)
         if shutdown_time >= NEVER_TIME:
+	    logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/_dump_shutdown")
             return
         # Log trapqs around time of shutdown
         for dtrapq in self.trapqs.values():
@@ -292,15 +348,20 @@ class PrinterMotionReport:
         # Log estimated toolhead position at time of shutdown
         dtrapq = self.trapqs.get('toolhead')
         if dtrapq is None:
+	    logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/_dump_shutdown")
             return
         pos, velocity = dtrapq.get_trapq_position(shutdown_time)
         if pos is not None:
             logging.info("Requested toolhead position at shutdown time %.6f: %s"
                          , shutdown_time, pos)
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/_dump_shutdown")
     def _shutdown(self):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/_shutdown")
         self.printer.get_reactor().register_callback(self._dump_shutdown)
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/_shutdown")
     # Status reporting
     def get_status(self, eventtime):
+	logging.info("[log](+)extras/motion_report.py/PrinterMotionReport/get_status")
         if eventtime < self.next_status_time or not self.trapqs:
             return self.last_status
         self.next_status_time = eventtime + STATUS_REFRESH_TIME
@@ -327,7 +388,9 @@ class PrinterMotionReport:
         self.last_status['live_position'] = toolhead.Coord(*(xyzpos + epos))
         self.last_status['live_velocity'] = xyzvelocity
         self.last_status['live_extruder_velocity'] = evelocity
+	logging.info("[log](-)extras/motion_report.py/PrinterMotionReport/get_status")
         return self.last_status
 
 def load_config(config):
+    logging.info("[log](+/-)extras/motion_report.py/load_config")
     return PrinterMotionReport(config)

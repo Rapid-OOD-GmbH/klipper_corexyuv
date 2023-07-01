@@ -3,9 +3,11 @@
 # Copyright (C) 2018  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
+import logging
 
 class HomingOverride:
     def __init__(self, config):
+	logging.info("[log](+)extras/homing_override.py/HomingOverride/__init__")
         self.printer = config.get_printer()
         self.start_pos = [config.getfloat('set_position_' + a, None)
                           for a in 'xyz']
@@ -17,10 +19,13 @@ class HomingOverride:
         self.gcode = self.printer.lookup_object('gcode')
         self.prev_G28 = self.gcode.register_command("G28", None)
         self.gcode.register_command("G28", self.cmd_G28)
+	logging.info("[log](-)extras/homing_override.py/HomingOverride/__init__")
     def cmd_G28(self, gcmd):
+	logging.info("[log](+)extras/homing_override.py/HomingOverride/cmd_G28")
         if self.in_script:
             # Was called recursively - invoke the real G28 command
             self.prev_G28(gcmd)
+	    logging.info("[log](-)extras/homing_override.py/HomingOverride/cmd_G28")
             return
 
         # if no axis is given as parameter we assume the override
@@ -41,6 +46,7 @@ class HomingOverride:
 
         if not override:
             self.prev_G28(gcmd)
+	    logging.info("[log](-)extras/homing_override.py/HomingOverride/cmd_G28")
             return
 
         # Calculate forced position (if configured)
@@ -60,6 +66,8 @@ class HomingOverride:
             self.template.run_gcode_from_command(context)
         finally:
             self.in_script = False
+	logging.info("[log](-)extras/homing_override.py/HomingOverride/cmd_G28")
 
 def load_config(config):
+    logging.info("[log](+/-)extras/homing_override.py/load_config")
     return HomingOverride(config)
